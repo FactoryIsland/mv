@@ -1,4 +1,4 @@
-import { Select, Input, Confirm, prompt, Checkbox } from "https://deno.land/x/cliffy@v0.25.0/prompt/mod.ts";
+import { Select, Input, Confirm, prompt } from "https://deno.land/x/cliffy@v0.25.0/prompt/mod.ts";
 
 import { ConfigFile, writeConfig } from "./file.ts";
 import { printCreateHelpMenu } from "./help.ts";
@@ -97,7 +97,10 @@ export async function createProject(args: string[]) {
             `git init`,
             `git remote add origin ${config.gitLink}`,
             `git branch -M main`
-        ]);
+        ], true);
     }
-    await sh(`curl 'https://files.factoryisland.net/${config.framework}/setup.sh' -o setup.sh | sh`);
+    
+    const script = await sh("sh setup.sh");
+    await script.status();
+    await sh("rm setup.sh");
 }
