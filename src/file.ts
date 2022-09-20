@@ -1,6 +1,7 @@
 export interface ConfigFile {
     name: string;
     language: string;
+    type: string;
     framework: string;
     author: string;
     git: boolean;

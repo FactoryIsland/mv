@@ -7,8 +7,12 @@ export async function shs(cmds: string[], wait = false) {
     }
 }
 
-export async function sh(cmd: string) {
-    return await Deno.run({
+export async function sh(cmd: string, wait = false) {
+    const shell = await Deno.run({
         cmd: cmd.split(" ")
     });
+    if (wait) {
+        await shell.status();
+    }
+    return shell;
 }
