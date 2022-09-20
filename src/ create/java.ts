@@ -49,5 +49,5 @@ export async function finalizeJava(setup: Setup) {
     await sh(`mkdir ${pomDetails.groupId!.split(".")[0]}`, true);
     await sh(`mkdir ${pomDetails.groupId!.split(".")[0]}/${pomDetails.groupId!.split(".")[1]}`, true);
     await sh(`mkdir ${pomDetails.groupId!.split(".")[0]}/${pomDetails.groupId!.split(".")[1]}/${pomDetails.artifactId!}`, true);
-    await sh(`mv * ${pomDetails.groupId!.split(".")[0]}/${pomDetails.groupId!.split(".")[1]}/${pomDetails.artifactId!}/.`, true);
+    await sh(`mv *.java ${pomDetails.groupId!.split(".")[0]}/${pomDetails.groupId!.split(".")[1]}/${pomDetails.artifactId!}/.`, true);
 }
