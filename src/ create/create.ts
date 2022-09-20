@@ -164,16 +164,18 @@ export async function createProject(args: string[]) {
     }
 
     //If we are using a framework
-    if (setup.type == "app" && setup.framework != "none") {
-        //Delete the empty folder
-        await sh(`rm -rf ${setup.name!}`, true);
-
-        //Clone corresponding git repository
-        await sh(`git clone -b ${setup.framework}-${setup.language} --single-branch https://github.com/FunctionMV/mv-resources.git`, true);
-
-        //Rename directory to the project name
-        await Deno.rename("mv-resources", setup.name!);
+    if (setup.type == "lib") {
+        setup.framework = "none";
     }
+
+    //Delete the empty folder
+    await sh(`rm -rf ${setup.name!}`, true);
+
+    //Clone corresponding git repository
+    await sh(`git clone -b ${setup.framework}-${setup.language} --single-branch https://github.com/FunctionMV/mv-resources.git`, true);
+
+    //Rename directory to the project name
+    await Deno.rename("mv-resources", setup.name!);
 
     //Move into directory
     await Deno.chdir(`${Deno.cwd()}/${setup.name!}`);
@@ -183,8 +185,11 @@ export async function createProject(args: string[]) {
         setup.gitLink = "";
     }
 
-    //Remove old git folder
-    await sh("rm -rf .git", true);
+    
+    if (setup.type == "app" && setup.framework != "none") {
+        //Remove old git folder
+        await sh("rm -rf .git", true);
+    }
 
     //If git, setup git
     if (setup.git!) {
