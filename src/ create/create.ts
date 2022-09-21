@@ -75,10 +75,11 @@ export async function createProject(args: string[]) {
         message: "Framework:",
         type: Select,
         options: [ 
-            {
-                name: "FactoryIsland Modding API",
-                value: "fimod"
-            }, { 
+            //{
+            //    name: "FactoryIsland Modding API",
+            //    value: "fimod"
+            //}, 
+            { 
                 name: "OpenGL Renderer",
                 value: "render"
             },
