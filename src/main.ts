@@ -13,6 +13,8 @@ async function main(args: string[]) {
         case "create":
             await createProject(args);
             break;
+        default:
+            break;
     }
 }
 
