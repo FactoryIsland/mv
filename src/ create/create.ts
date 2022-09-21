@@ -28,7 +28,7 @@ export async function createProject(args: string[]) {
     const setup: Setup = await prompt([{
         //Project name
         name: "name",
-        message: "Project name:",
+        message: "Project name",
         type: Input,
         validate: (name) => {
             if (name == "") {
@@ -50,11 +50,11 @@ export async function createProject(args: string[]) {
     }, {
         //Application or Library
         name: "type",
-        message: "Project type:",
+        message: "Project type",
         type: Select,
         options: [
             {
-                name: "Application built on framework",
+                name: "Application",
                 value: "app"
             },
             {
@@ -79,7 +79,7 @@ export async function createProject(args: string[]) {
                 name: "FactoryIsland Modding API",
                 value: "fimod"
             }, { 
-                name: "openGL renderer",
+                name: "OpenGL Renderer",
                 value: "render"
             },
             {
@@ -199,6 +199,8 @@ export async function createProject(args: string[]) {
         }
         await sh("git branch -M main", true);
     }
+
+    await sh("mkdir .mvc", true);
 
     //Switch the language and continue setup based on the current language
     switch (setup.language) {

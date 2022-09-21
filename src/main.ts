@@ -3,7 +3,7 @@ import { printMainHelpMenu } from "./help.ts";
 
 async function main(args: string[]) {
     if (args.length < 1) {
-        console.log("No command specified. Run mv --help for a list of commands.");
+        console.log("No command specified. Run 'mv help' for a list of commands.");
         return;
     }
     switch (args[0]) {
