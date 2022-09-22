@@ -1,6 +1,5 @@
-import { encode, decode } from "https://deno.land/std/encoding/base64.ts"
-import { Confirm } from "https://deno.land/x/cliffy@v0.25.0/prompt/confirm.ts";
-import { Input } from "https://deno.land/x/cliffy@v0.25.0/prompt/input.ts";
+import { encode, decode } from "https://deno.land/std@0.156.0/encoding/base64.ts"
+import { Confirm, Input } from "https://deno.land/x/cliffy@v0.25.0/prompt/mod.ts";
 import { getScripts, writeScripts } from "./file.ts";
 
 export async function shs(cmds: string[], wait = false) {
