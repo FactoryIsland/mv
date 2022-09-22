@@ -1,4 +1,5 @@
-import { createProject } from "./%20create/create.ts";
+import { createProject } from "./create/create.ts";
+import { setupProject } from "./create/setup.ts";
 import { printMainHelpMenu } from "./help.ts";
 
 async function main(args: string[]) {
@@ -12,6 +13,9 @@ async function main(args: string[]) {
             break;
         case "create":
             await createProject(args);
+            break;
+        case "setup":
+            await setupProject(args);
             break;
         default:
             break;

@@ -1,10 +1,9 @@
-import { Select, Input, Confirm, prompt } from "https://deno.land/x/cliffy@v0.25.0/prompt/mod.ts";
+import { Confirm, Input, Select, prompt } from "https://deno.land/x/cliffy@v0.25.0/prompt/mod.ts";
+import { writeConfig, writeScripts } from "../file.ts";
+import { printSetupHelpMenu } from "../help.ts";
+import { sh } from "../utils.ts";
 
-import { printCreateHelpMenu } from "./../help.ts";
-import { sh } from "./../utils.ts";
-import { finalizeJava } from "./java.ts";
-
-export interface Setup {
+export interface SetupEmpty {
     name: string;
     language: string;
     type: string;
@@ -15,21 +14,20 @@ export interface Setup {
     git: boolean;
     gitExtern?: boolean;
     gitLink?: string;
-    commit?: boolean;
     licence: string;
 }
 
-export async function createProject(args: string[]) {
+export async function setupProject(args: string[]) {
     if (args.length > 1 && args[1] == "--help") {
-        printCreateHelpMenu();
+        printSetupHelpMenu();
         return;
     } 
 
-    let givenFramework = "";
+    let givenFramework: string = "";
 
     //Prompt given to user
 
-    const setup: Setup = await prompt([{
+    const setup: SetupEmpty = await prompt([{
         //Project name
         name: "name",
         message: "Project name",
@@ -127,7 +125,7 @@ export async function createProject(args: string[]) {
     }, {
         //Git used
         name: "git",
-        message: "Would you like to generate a git repository?",
+        message: "Do you have a git repository?",
         type: Confirm,
         after: async ({ git }, next) => {
             if (git) {
@@ -139,13 +137,13 @@ export async function createProject(args: string[]) {
     }, {
         //External git repository used
         name: "gitExtern",
-        message: "Would you like to link an external git repository?",
+        message: "Does the git repository have an external git repository?",
         type: Confirm,
         after: async ({ gitExtern }, next) => {
             if (gitExtern) {
               await next("gitLink");
             } else {
-              await next("commit");
+              await next("licence");
             }
         }
     }, {
@@ -159,11 +157,6 @@ export async function createProject(args: string[]) {
             }
             return true;
         }
-    }, {
-        //Run initial commit
-        name: "commit",
-        message: "Would you like to run an initial commit",
-        type: Confirm,
     }, {
         //Choose licence to use
         name: "licence",
@@ -183,52 +176,33 @@ export async function createProject(args: string[]) {
 
     setup.framework = givenFramework;
 
-    //Check if path is free
-    try {
-        await Deno.mkdir(setup.name!);
-    } catch (_err) {
-        console.log(`Directory ${setup.name!} already exists! Please remove the existing directory or use a different project name.`);
-        return;
-    }
-
-    //Delete the empty folder
-    await sh(`rm -rf ${setup.name!}`, true);
-
-    //Clone corresponding git repository
-    await sh(`git clone -b ${setup.framework}-${setup.language} --single-branch https://github.com/FunctionMV/mv-resources.git`, true);
-
-    //Rename directory to the project name
-    await Deno.rename("mv-resources", setup.name!);
-
-    //Move into directory
-    await Deno.chdir(`${Deno.cwd()}/${setup.name!}`);
-
-    //Remove null and undefined values
-    if (setup.gitLink == null) {
-        setup.gitLink = "";
-    }
-
-    
-    if (setup.type == "app" && setup.framework != "none") {
-        //Remove old git folder
-        await sh("rm -rf .git", true);
-    }
-
-    //If git, setup git
-    if (setup.git!) {
-        await sh("git init", true);
-        if (setup.gitExtern!) {
-            await sh(`git remote add origin ${setup.gitLink}`, true);
-        }
-        await sh("git branch -M main", true);
-    }
-
     await sh("mkdir .mvc", true);
 
-    //Switch the language and continue setup based on the current language
-    switch (setup.language) {
-        case "java":
-            finalizeJava(setup);
-            break;
-    }
+    if (setup.gitLink == null) setup.gitLink = "";
+
+    await writeConfig({
+        name: setup.name!,
+        language: setup.language!,
+        type: setup.type!,
+        framework: setup.framework!,
+        author: setup.author!,
+        git: setup.git!,
+        gitLink: setup.gitLink!,
+        licence: setup.licence!
+    });
+    await writeScripts({
+        cliEditor: "vi",
+        scripts: [{
+            name: "commit",
+            type: "sh",
+            args: 1,
+            script: "Z2l0IGFkZCAqCmdpdCBjb21taXQgLWEgLW0gInthcmdzLmluZGV4LjB9Igo="
+        },
+        {
+            name: "push",
+            type: "sh",
+            args: 1,
+            script: "Z2l0IGFkZCAqCmdpdCBjb21taXQgLWEgLW0gInthcmdzLmluZGV4LjB9IgpnaXQgcHVzaCAtdSBvcmlnaW4gbWFpbgo="
+        }]
+    });
 }

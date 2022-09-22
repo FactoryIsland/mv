@@ -61,8 +61,7 @@ export async function finalizeJava(setup: Setup) {
         }
     }
 
-    if (setup.framework == null || setup.framework == null) setup.framework = "none";
-    if (setup.gitLink == null || setup.gitLink == null) setup.gitLink = "";
+    if (setup.gitLink == null) setup.gitLink = "";
 
     const config: ConfigFile = {
         name: setup.name,

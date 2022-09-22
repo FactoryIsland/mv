@@ -46,3 +46,17 @@ mvc create:
     
     `);
 }
+
+export function printSetupHelpMenu() {
+    console.log(`
+mvc setup:
+    will setup an existing project using the command line
+    setup wizard, and generate a few scripts
+    
+    Arguments:
+
+        this command has no additional arguments or subcommands,
+        and everything is handled in the setup wizard
+    
+    `);
+}
