@@ -9,8 +9,10 @@ export async function push(args: string[]) {
     }
 
     const scripts: ScriptsFile = await getScripts();
+    let found = false;
     scripts.scripts.forEach(async script => {
         if (script.name == "push") {
+            found = true;
             const scriptArgs: string[] = [];
             for (let i = 0; i < script.args; i++) {
                 if (args.length < i + 2) {
@@ -29,7 +31,9 @@ export async function push(args: string[]) {
             return;
         }
     });
-    console.log(`Could not find the push script, please create one using 'mvc script'.`);
+    if (!found) {
+        console.log(`Could not find the push script, please create one using 'mvc script'.`);
+    }
 }
 
 export async function commit(args: string[]) {
@@ -39,8 +43,10 @@ export async function commit(args: string[]) {
     }
 
     const scripts: ScriptsFile = await getScripts();
+    let found = false;
     scripts.scripts.forEach(async script => {
         if (script.name == "commit") {
+            found = true;
             const scriptArgs: string[] = [];
             for (let i = 0; i < script.args; i++) {
                 if (args.length < i + 2) {
@@ -59,7 +65,9 @@ export async function commit(args: string[]) {
             return;
         }
     });
-    console.log(`Could not find the commit script, please create one using 'mvc script'.`);
+    if (!found) {
+        console.log(`Could not find the commit script, please create one using 'mvc script'.`);
+    }
 }
 
 export async function build(args: string[]) {
@@ -69,8 +77,10 @@ export async function build(args: string[]) {
     }
 
     const scripts: ScriptsFile = await getScripts();
+    let found = false;
     scripts.scripts.forEach(async script => {
         if (script.name == "build") {
+            found = true;
             const scriptArgs: string[] = [];
             for (let i = 0; i < script.args; i++) {
                 if (args.length < i + 2) {
@@ -89,13 +99,17 @@ export async function build(args: string[]) {
             return;
         }
     });
-    console.log(`Could not find the build script, please create one using 'mvc script'.`);
+    if (!found) {
+        console.log(`Could not find the build script, please create one using 'mvc script'.`);
+    }
 }
 
 export async function other(args: string[]) {
     const scripts: ScriptsFile = await getScripts();
+    let found = false;
     scripts.scripts.forEach(async script => {
         if (script.name == args[0]) {
+            found = true;
             const scriptArgs: string[] = [];
             for (let i = 0; i < script.args; i++) {
                 if (args.length < i + 2) {
@@ -114,5 +128,7 @@ export async function other(args: string[]) {
             return;
         }
     });
-    console.log(`Could not find the '${args[0]}' script, please create one using 'mvc script'.`);
+    if (!found) {
+        console.log(`Could not find the '${args[0]}' script, please create one using 'mvc script'.`);
+    }
 }

@@ -14,8 +14,10 @@ export async function runScript(args: string[]) {
     }
 
     const scripts: ScriptsFile = await getScripts();
+    let found = false;
     scripts.scripts.forEach(async script => {
         if (script.name == args[1]) {
+            found = true;
             const scriptArgs: string[] = [];
             for (let i = 0; i < script.args; i++) {
                 if (args.length < i + 3) {
@@ -34,5 +36,7 @@ export async function runScript(args: string[]) {
             return;
         }
     });
-    console.log(`Could not find script '${args[1]}'.`);
+    if (!found) {
+        console.log(`Could not find the '${args[1]}' script, please create one using 'mvc script'.`);
+    }
 }
