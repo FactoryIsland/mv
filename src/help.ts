@@ -89,3 +89,42 @@ mvc script <cli? <command!>>:
     
     `);
 }
+
+export function printPushHelpMenu() {
+    console.log(`
+mvc push <message>:
+    will push the project to the external git repository with the
+    message set to the specified message
+    
+    Arguments:
+
+        <message> - the message to push the project with
+    
+    `);
+}
+
+export function printCommitHelpMenu() {
+    console.log(`
+mvc commit <message>:
+    will commit the project to the local git repository with the
+    message set to the specified message
+    
+    Arguments:
+
+        <message> - the message to commit the project with
+    
+    `);
+}
+
+export function printBuildHelpMenu() {
+    console.log(`
+mvc build <args>:
+    will build the project according to the build script that
+    has to be setup previously
+    
+    Arguments:
+
+        <args> - any args needed for the build command
+    
+    `);
+}
