@@ -34,5 +34,5 @@ export async function runScript(args: string[]) {
             return;
         }
     });
-    
+    console.log(`Could not find script '${args[1]}'.`);
 }

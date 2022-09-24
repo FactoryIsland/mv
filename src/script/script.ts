@@ -15,12 +15,25 @@ export async function editScript(args: string[]) {
                     const scripts = await getScripts();
                     scripts.cliEditor = args[2];
                     await writeScripts(scripts);
-                    return;
                 }
                 else {
-                    console.log("You must specify a command to use as the cli editor");
-                    return;
+                    console.log("You must specify a command to use as the cli editor!");
                 }
+                return;
+            case "delete":
+                if (args.length > 2) {
+                    const scripts = await getScripts();
+                    scripts.scripts.forEach((script, index) => {
+                        if (script.name == args[2]) {
+                            scripts.scripts.splice(index, 1);
+                        }
+                    })
+                    await writeScripts(scripts);
+                }
+                else {
+                    console.log("You must specify a script to delete!");
+                }
+                return;
         }
     }
 
