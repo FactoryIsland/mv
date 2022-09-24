@@ -27,7 +27,7 @@ export async function getConfig() {
 }
 
 export async function writeConfig(config: ConfigFile) {
-    await Deno.writeTextFile(`./.mvc/config.json`, JSON.stringify(config));
+    await Deno.writeTextFile(`./.mvc/config.json`, JSON.stringify(config, null, '\t'));
 }
 
 export async function getScripts() {
@@ -36,5 +36,5 @@ export async function getScripts() {
 }
 
 export async function writeScripts(scripts: ScriptsFile) {
-    await Deno.writeTextFile(`./.mvc/scripts.json`, JSON.stringify(scripts));
+    await Deno.writeTextFile(`./.mvc/scripts.json`, JSON.stringify(scripts, null, '\t'));
 }
