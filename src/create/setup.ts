@@ -1,6 +1,8 @@
 import { Confirm, Input, Select, prompt } from "https://deno.land/x/cliffy@v0.25.0/prompt/mod.ts";
 import { writeConfig, writeScripts } from "../file.ts";
 import { printSetupHelpMenu } from "../help.ts";
+import { getRepo } from "../update/repos.ts";
+import { getVersion } from "../update/repos.ts";
 import { sh } from "../utils.ts";
 
 export interface SetupEmpty {
@@ -169,7 +171,7 @@ export async function setupProject(args: string[]) {
             },
             {
                 name: "None",
-                value: ""
+                value: "none"
             }
         ]
     }]);
@@ -185,6 +187,7 @@ export async function setupProject(args: string[]) {
         language: setup.language!,
         type: setup.type!,
         framework: setup.framework!,
+        frameworkVersion: await getVersion(getRepo(setup.language, setup.framework)),
         author: setup.author!,
         git: setup.git!,
         gitLink: setup.gitLink!,

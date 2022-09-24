@@ -1,10 +1,11 @@
 {
-    "name": "mvc",
-    "language": "ts",
-    "type": "app",
-    "framework": "none",
-    "author": "Maxim Savenkov",
-    "git": true,
-    "gitLink": "https://github.com/TeamMV/mvc.git",
-    "licence": "MIT"
+	"name": "mvc",
+	"language": "ts",
+	"type": "app",
+	"framework": "none",
+	"author": "Maxim Savenkov",
+	"git": true,
+	"gitLink": "https://github.com/TeamMV/mvc.git",
+	"licence": "MIT",
+	"frameworkVersion": "v0.0.0"
 }

@@ -3,6 +3,7 @@ export interface ConfigFile {
     language: string;
     type: string;
     framework: string;
+    frameworkVersion: string;
     author: string;
     git: boolean;
     gitLink: string;

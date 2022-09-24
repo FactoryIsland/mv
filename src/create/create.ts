@@ -176,7 +176,7 @@ export async function createProject(args: string[]) {
             },
             {
                 name: "None",
-                value: ""
+                value: "none"
             }
         ]
     }]);
@@ -229,6 +229,8 @@ export async function createProject(args: string[]) {
     switch (setup.language) {
         case "java":
             finalizeJava(setup);
+            break;
+        case "ts":
             break;
     }
 }

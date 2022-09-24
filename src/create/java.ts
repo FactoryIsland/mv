@@ -1,5 +1,6 @@
 import {Input, prompt } from "https://deno.land/x/cliffy@v0.25.0/prompt/mod.ts";
 import { ConfigFile, ScriptsFile, writeConfig, writeScripts } from "../file.ts";
+import { updateVersion } from "../update/repos.ts";
 import { shScript, sh } from "../utils.ts";
 
 import { Setup } from "./create.ts";
@@ -68,6 +69,7 @@ export async function finalizeJava(setup: Setup) {
         language: "java",
         type: setup.type,
         framework: setup.framework,
+        frameworkVersion: "none",
         author: setup.author,
         git: setup.git,
         gitLink: setup.gitLink,
@@ -92,4 +94,6 @@ export async function finalizeJava(setup: Setup) {
 
     await writeConfig(config);
     await writeScripts(scripts);
+
+    await updateVersion("java", config.framework);
 }
