@@ -91,3 +91,28 @@ export async function build(args: string[]) {
     });
     console.log(`Could not find the build script, please create one using 'mvc script'.`);
 }
+
+export async function other(args: string[]) {
+    const scripts: ScriptsFile = await getScripts();
+    scripts.scripts.forEach(async script => {
+        if (script.name == args[0]) {
+            const scriptArgs: string[] = [];
+            for (let i = 0; i < script.args; i++) {
+                if (args.length < i + 2) {
+                    scriptArgs.push("");
+                }
+                else {
+                    scriptArgs.push(args[i + 1]);
+                }
+            }
+            const finalScript = setupArgs(script.script, scriptArgs);
+            switch (script.type) {
+                case "sh":
+                    await shScript(finalScript);
+                    break;
+            }
+            return;
+        }
+    });
+    console.log(`Could not find the '${args[0]}' script, please create one using 'mvc script'.`);
+}

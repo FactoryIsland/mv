@@ -1,7 +1,7 @@
 import { createProject } from "./create/create.ts";
 import { setupProject } from "./create/setup.ts";
 import { printMainHelpMenu } from "./help.ts";
-import { build, commit, push } from "./script/basic.ts";
+import { build, commit, other, push } from "./script/basic.ts";
 import { runScript } from "./script/run.ts";
 import { editScript } from "./script/script.ts";
 
@@ -36,6 +36,7 @@ async function main(args: string[]) {
             await build(args);
             break;
         default:
+            await other(args);
             break;
     }
 }
