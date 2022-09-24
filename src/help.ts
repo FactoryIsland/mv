@@ -29,6 +29,12 @@ mvc command line tool:
 
         commit <msg> - will commit the project to the local git repository
                        according to the scripts.json file
+
+        build <args?> - will build the project according to the scripts.json
+                        file. Any arguments that are needed should be provided
+                    
+        <other> <args?> - will execute the script named <other>, this only works
+                          if the script is not named one of the other commands
     `);
 }
 

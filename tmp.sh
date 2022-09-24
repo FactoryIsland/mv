@@ -1,3 +1,3 @@
 git add *
-git commit -a -m "Deleted test script"
+git commit -a -m "Added help messaged"
 git push -u origin main
