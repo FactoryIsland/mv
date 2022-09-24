@@ -9,7 +9,7 @@ export async function push(args: string[]) {
     }
 
     const scripts: ScriptsFile = await getScripts();
-    scripts.scripts.forEach(script => {
+    scripts.scripts.forEach(async script => {
         if (script.name == "push") {
             const scriptArgs: string[] = [];
             for (let i = 0; i < script.args; i++) {
@@ -23,7 +23,7 @@ export async function push(args: string[]) {
             const finalScript = setupArgs(script.script, scriptArgs);
             switch (script.type) {
                 case "sh":
-                    shScript(finalScript);
+                    await shScript(finalScript);
                     break;
             }
             return;
@@ -39,7 +39,7 @@ export async function commit(args: string[]) {
     }
 
     const scripts: ScriptsFile = await getScripts();
-    scripts.scripts.forEach(script => {
+    scripts.scripts.forEach(async script => {
         if (script.name == "commit") {
             const scriptArgs: string[] = [];
             for (let i = 0; i < script.args; i++) {
@@ -53,7 +53,7 @@ export async function commit(args: string[]) {
             const finalScript = setupArgs(script.script, scriptArgs);
             switch (script.type) {
                 case "sh":
-                    shScript(finalScript);
+                    await shScript(finalScript);
                     break;
             }
             return;
@@ -69,7 +69,7 @@ export async function build(args: string[]) {
     }
 
     const scripts: ScriptsFile = await getScripts();
-    scripts.scripts.forEach(script => {
+    scripts.scripts.forEach(async script => {
         if (script.name == "build") {
             const scriptArgs: string[] = [];
             for (let i = 0; i < script.args; i++) {
@@ -83,7 +83,7 @@ export async function build(args: string[]) {
             const finalScript = setupArgs(script.script, scriptArgs);
             switch (script.type) {
                 case "sh":
-                    shScript(finalScript);
+                    await shScript(finalScript);
                     break;
             }
             return;

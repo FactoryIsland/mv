@@ -14,7 +14,7 @@ export async function runScript(args: string[]) {
     }
 
     const scripts: ScriptsFile = await getScripts();
-    scripts.scripts.forEach(script => {
+    scripts.scripts.forEach(async script => {
         if (script.name == args[1]) {
             const scriptArgs: string[] = [];
             for (let i = 0; i < script.args; i++) {
@@ -28,7 +28,7 @@ export async function runScript(args: string[]) {
             const finalScript = setupArgs(script.script, scriptArgs);
             switch (script.type) {
                 case "sh":
-                    shScript(finalScript);
+                    await shScript(finalScript);
                     break;
             }
             return;
