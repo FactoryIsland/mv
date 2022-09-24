@@ -60,3 +60,32 @@ mvc setup:
     
     `);
 }
+
+export function printRunHelpMenu() {
+    console.log(`
+mvc run <name> <args?>:
+    will run a script from the scripts file, if a script
+    with that name exists
+    
+    Arguments:
+
+        <name> - the name of the script you want to run
+
+        <args?> - the arguments for the script, this can be empty
+    
+    `);
+}
+
+export function printScriptHelpMenu() {
+    console.log(`
+mvc script <cli? <command!>>:
+    will create or edit a script, you will be asked for the name,
+    type, and amount of arguments, and ask you to write the script
+    then, it will save it into the scripts file
+    
+    Arguments:
+
+        cli <command> - set the cli editor for this project
+    
+    `);
+}

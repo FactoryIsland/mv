@@ -34,7 +34,7 @@ export async function createProject(args: string[]) {
         name: "name",
         message: "Project name",
         type: Input,
-        validate: (name) => {
+        validate: name => {
             if (name == "") {
                 return "Must not be empty";
             }

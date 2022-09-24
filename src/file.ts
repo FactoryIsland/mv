@@ -11,12 +11,14 @@ export interface ConfigFile {
 
 export interface ScriptsFile {
     cliEditor: string;
-    scripts: {
-        name: string;
-        script: string;
-        type: string;
-        args: number;
-    }[]
+    scripts: Script[];
+}
+
+export interface Script {
+    name: string;
+    script: string;
+    type: string;
+    args: number;
 }
 
 export async function getConfig() {

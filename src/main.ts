@@ -1,6 +1,8 @@
 import { createProject } from "./create/create.ts";
 import { setupProject } from "./create/setup.ts";
 import { printMainHelpMenu } from "./help.ts";
+import { runScript } from "./script/run.ts";
+import { editScript } from "./script/script.ts";
 
 async function main(args: string[]) {
     if (args.length < 1) {
@@ -16,6 +18,12 @@ async function main(args: string[]) {
             break;
         case "setup":
             await setupProject(args);
+            break;
+        case "run":
+            await runScript(args);
+            break;
+        case "script":
+            await editScript(args);
             break;
         default:
             break;

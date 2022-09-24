@@ -1,6 +1,6 @@
 import {Input, prompt } from "https://deno.land/x/cliffy@v0.25.0/prompt/mod.ts";
 import { ConfigFile, ScriptsFile, writeConfig, writeScripts } from "../file.ts";
-import { script, sh } from "../utils.ts";
+import { shScript, sh } from "../utils.ts";
 
 import { Setup } from "./create.ts";
 
@@ -57,7 +57,7 @@ export async function finalizeJava(setup: Setup) {
     await Deno.chdir("../../../.");
     if (setup.git) {
         if (setup.commit) {
-            await script(setup.gitExtern ? "Z2l0IGFkZCAqCmdpdCBjb21taXQgLWEgLW0gIkluaXRpYWwgY29tbWl0IgpnaXQgcHVzaCAtdSBvcmlnaW4gbWFpbgo=" : "Z2l0IGFkZCAqCmdpdCBjb21taXQgLWEgLW0gIkluaXRpYWwgY29tbWl0Igo=");
+            await shScript(setup.gitExtern ? "Z2l0IGFkZCAqCmdpdCBjb21taXQgLWEgLW0gIkluaXRpYWwgY29tbWl0IgpnaXQgcHVzaCAtdSBvcmlnaW4gbWFpbgo=" : "Z2l0IGFkZCAqCmdpdCBjb21taXQgLWEgLW0gIkluaXRpYWwgY29tbWl0Igo=");
         }
     }
 

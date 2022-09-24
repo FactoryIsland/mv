@@ -21,7 +21,7 @@ export async function sh(cmd: string, wait = false) {
     return shell;
 }
 
-export async function script(script: string) {
+export async function shScript(script: string) {
     await Deno.writeTextFile("tmp.sh", new TextDecoder().decode(decode(script)));
     await sh("sh tmp.sh", true);
     await Deno.remove("tmp.sh");
@@ -63,7 +63,7 @@ quit, or :q! to discard the changes.
 
     const cli = await Confirm.prompt(`Would you like to use your cli editor (${scripts.cliEditor})?`);
 
-    if (found) {
+    if (found && scripts.scripts[scriptId].type == "sh") {
         await Deno.writeTextFile("tmp.sh", new TextDecoder().decode(decode(scripts.scripts[scriptId].script)));
     }
 
