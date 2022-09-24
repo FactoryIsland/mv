@@ -1,6 +1,6 @@
 import { Destination, download } from "../download/download.ts";
 import { sh } from "../utils.ts";
-import { getRelease, getVersion, repos } from "./repos.ts";
+import { getRelease, getToolVersion, getVersion, repos } from "./repos.ts";
 
 const env = {
     version: "v1.1.0",
@@ -18,7 +18,7 @@ export async function upgrade() {
     }
 
     try {
-        console.log("Checking local versions");
+        console.log("Checking local versions...");
         await Deno.stat("/tmp/mvc-newVersion-G63fwFw3f8w");
         console.log("Local version found!");
         await sh("chmod +x /tmp/mvc-newVersion-G63fwFw3f8w", true);
@@ -28,13 +28,14 @@ export async function upgrade() {
     } catch (_err) {
         console.log("No local versions found.");
     }
-
-    const version = await getVersion(repos.mvc);
+    console.log("Checking external version...");
+    const version = await getToolVersion();
     if (version != env.version) {
         console.log("New version detected!");
         console.log("Finding version release...");
         const release = await getRelease(repos.mvc);
-        if (release == null) {
+        if (release == null || release.assets == null) {
+            console.log(release);
             console.log("Version release not found!");
             return;
         }
@@ -72,7 +73,7 @@ export async function upgrade() {
 export async function checkVersion() {
     try {
         console.log("Checking for new version...");
-        const version = await getVersion(repos.mvc);
+        const version = await getToolVersion();
         if (version != env.version) {
             console.log("New version detected!");
             console.log(`

@@ -118,6 +118,13 @@ export async function getVersion(repo: string) {
     return release.tag_name;
 }
 
+export async function getToolVersion() {
+    const res = await fetch(`https://files.mvteam.dev/mvc-version`, {
+        method: "GET"
+    });
+    return (await (await res.blob()).text()).trimEnd();
+}
+
 export async function getRelease(repo: string) {
     const res = await fetch(`${repo}/releases/latest`, {
         method: "GET"
