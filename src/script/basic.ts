@@ -129,6 +129,6 @@ export async function other(args: string[]) {
         }
     });
     if (!found) {
-        console.log(`Could not find the '${args[0]}' script, please create one using 'mvc script'.`);
+        console.log(`Unkown subcommand '${args[0]}'.`);
     }
 }

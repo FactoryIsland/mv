@@ -1,6 +1,35 @@
 import { encode, decode } from "https://deno.land/std@0.156.0/encoding/base64.ts"
 import { Confirm, Input } from "https://deno.land/x/cliffy@v0.25.0/prompt/mod.ts";
-import { getScripts, writeScripts } from "./file.ts";
+import { ConfigFile, getConfig, getScripts, ScriptsFile, writeScripts } from "./file.ts";
+
+export async function info() {
+    const config = await getConfig();
+    console.log(`
+Project '${config.name}' by '${config.author}'
+Using mvc command line build tool
+Uses the ${config.language} licence
+Git is ${config.git ? '' : 'not '}configured. ${(!config.git || config.gitLink == '') ? '' : `\nExternal git repository is ${config.gitLink}`}
+    `)
+}
+
+export async function checkDir() {
+    let config: ConfigFile ;
+    let scripts: ScriptsFile;
+    try {
+        config = await getConfig();
+        scripts = await getScripts();
+    }
+    catch (_err) {
+        console.log("No mvc project was configured at this location");
+        await Deno.exit(1);
+        return;
+    }
+    if (config == null || scripts == null) {
+        console.log("No mvc project was configured at this location");
+        await Deno.exit(1);
+        return;
+    }
+}
 
 export async function shs(cmds: string[], wait = false) {
     for (let i = 0; i < cmds.length; i++) {
