@@ -18,12 +18,6 @@
 			"script": "bWFrZQo=",
 			"type": "sh",
 			"args": 0
-		},
-		{
-			"name": "test",
-			"script": "ZWNobyBoZWxsbyB3b3JsZAo=",
-			"type": "sh",
-			"args": 0
 		}
 	]
 }
