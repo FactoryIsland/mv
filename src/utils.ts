@@ -72,6 +72,7 @@ quit, or :q! to discard the changes.
         await sh(`${scripts.cliEditor} tmp.sh`, true);
         try {
             script = await Deno.readTextFile("tmp.sh");
+            await sh("rm tmp.sh");
         }
         catch (_err) {
             return;
@@ -88,6 +89,7 @@ press enter when you are finished (after saving the file).
         await Input.prompt("Hit enter when you have finished writing the script");
         try {
             script = await Deno.readTextFile("tmp.sh");
+            await sh("rm tmp.sh");
         }
         catch (_err) {
             return;
