@@ -54,17 +54,22 @@ export async function download(url: string | URL, destination?: Destination, opt
         ],
         display: ':percent :bar :time (:completed/:total) :title'
     });
-    let now = Date.now();
-    let last = now;
+    let lastA = Date.now();
+    let lastB = Date.now();
+    let lastC = Date.now();
     let lenStr = '0.0KiB';
     let speedStr = '0.0KiB/s';
     let lastKiB = 0;
+    const totalLenStr = contentLength < 1024 ? `${contentLength.toFixed(2)}KiB` : (contentLength < 1048576 ? `${(contentLength / 1024).toFixed(2)}MiB` : `${(contentLength / 1048576).toFixed(2)}GiB`);
 
     let receivedLength = 0;
 
+    console.log(`Total file size: ${totalLenStr} (estimate)`);
+
     while (true) {
-        const interval = Date.now() - last;
-        if (interval > 100) {
+        const intervalA = Date.now() - lastA;
+
+        if (intervalA > 10) {
             const { done, value } = await reader.read();
 
             if (done) {
@@ -73,20 +78,31 @@ export async function download(url: string | URL, destination?: Destination, opt
 
             receivedLength += value.length;
             lastKiB += value.length;
+            lastA = Date.now();
 
-            last = now;
-            now = Date.now();
+            progress.render(Math.floor(receivedLength / 1024), {
+                title: `${lenStr} | ${speedStr}`
+            });
+        }
+
+        const intervalB = Date.now() - lastB;
+
+        if (intervalB > 200) {
+            lastB = Date.now();
 
             const kiBLen = receivedLength / 1024;
-            lenStr = kiBLen < 1024 ? `${kiBLen.toFixed(2)}KiB` : (kiBLen < 1048576 ? `${(kiBLen / 1024).toFixed(2)}MiB` : `${(receivedLength / 1048576).toFixed(2)}GiB`);
-
-            const speed = (lastKiB / 1024) / (interval / 1000);
-            lastKiB = 0;
-            speedStr = speed < 1024 ? `${speed.toFixed(2)}KiB/s` : (speed < 1048576 ? `${(speed / 1024).toFixed(2)}MiB/s` : `${(speed / 1048576).toFixed(2)}GiB/s`);
+            lenStr = kiBLen < 1024 ? `${kiBLen.toFixed(2)}KiB` : (kiBLen < 1048576 ? `${(kiBLen / 1024).toFixed(2)}MiB` : `${(kiBLen / 1048576).toFixed(2)}GiB`);
         }
-        progress.render(Math.floor(receivedLength / 1024), {
-            title: `${lenStr} | ${speedStr}`
-        });
+
+        const intervalC = Date.now() - lastC;
+
+        if (intervalC > 1000) {
+            lastC = Date.now();
+
+            const speed = ((lastKiB * 1000) / 1024) / intervalC;
+            lastKiB = 0;
+            speedStr = speed < 1024 ? `${speed.toFixed(1)}KiB/s` : (speed < 1048576 ? `${(speed / 1024).toFixed(1)}MiB/s` : `${(speed / 1048576).toFixed(1)}GiB/s`);
+        }
     }
 
     const blob = await response.blob();

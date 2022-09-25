@@ -1,7 +1,6 @@
 import { updateJavaRender } from "./update.ts";
 
 export const repos = {
-    mvc: "https://api.github.com/repos/TeamMV/mvc",
     java: {
         render: "https://api.github.com/repos/TeamMV/Rendering"
     },

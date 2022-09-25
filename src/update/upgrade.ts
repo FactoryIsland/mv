@@ -1,6 +1,6 @@
 import { Destination, download } from "../download/download.ts";
 import { sh } from "../utils.ts";
-import { getRelease, getToolVersion, getVersion, repos } from "./repos.ts";
+import { getToolVersion } from "./repos.ts";
 
 const env = {
     version: "v1.1.0",
@@ -32,34 +32,18 @@ export async function upgrade() {
     const version = await getToolVersion();
     if (version != env.version) {
         console.log("New version detected!");
-        console.log("Finding version release...");
-        const release = await getRelease(repos.mvc);
-        if (release == null || release.assets == null) {
-            console.log(release);
-            console.log("Version release not found!");
-            return;
-        }
-        const asset = release.assets.find(asset => {
-            return asset.name == `mvc-${env.type}`;
-        });
-        if (asset == null) {
-            console.log("No new version releases found!");
-            return;
-        }
-        console.log("Found new version release!");
         console.log("Downloading new version...");
         try {
             const dest: Destination = {
                 file: "mvc-newVersion-G63fwFw3f8w",
                 dir: "/tmp/"
             };
-            await download(asset.browser_download_url, dest);
+            await download(`https://github.com/TeamMV/mvc/releases/download/${version}/mvc-${env.type}`, dest);
             console.log("Downloaded new version!");
             await sh("chmod +x /tmp/mvc-newVersion-G63fwFw3f8w", true);
             await sh("mv /tmp/mvc-newVersion-G63fwFw3f8w /usr/bin/mvc");
         }
         catch (_err) {
-            console.log(_err);
             console.log("New version download failed.");
             return;
         }
