@@ -187,7 +187,7 @@ export async function setupProject(args: string[]) {
         language: setup.language!,
         type: setup.type!,
         framework: setup.framework!,
-        frameworkVersion: await getVersion(getRepo(setup.language, setup.framework)),
+        frameworkVersion: await getVersion(setup.language, setup.framework),
         author: setup.author!,
         git: setup.git!,
         gitLink: setup.gitLink!,

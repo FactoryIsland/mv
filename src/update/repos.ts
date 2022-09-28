@@ -22,7 +22,7 @@ export function getRepo(language: string, framework: string) {
                     return repos.java.render;
             }
             break;
-        case "typescript":
+        case "ts":
             break;
     }
 
@@ -41,7 +41,7 @@ export async function updateVersion(language: string, framework: string) {
                     await updateJavaRender();
             }
             break;
-        case "typescript":
+        case "ts":
             break;
     }
 }
@@ -105,23 +105,40 @@ export interface Release {
   assets: Asset[];
 }
 
-export async function getVersion(repo: string) {
-    if (repo == "") return "v0.0.0";
-    const res = await fetch(`${repo}/releases/latest`, {
+export interface Versions {
+    mvc: string;
+    java: {
+        rendering: string;
+    }
+}
+
+export async function getVersion(language: string, framework: string) {
+    if (framework == "none") {
+        return "-1";
+    }
+    const res = await fetch(`https://files.mvteam.dev/version`, {
         method: "GET"
     });
-    const release = await res.json() as Release;
-    if (release == null || release.tag_name == null) {
-        return "v0.0.0";
+    const versions: Versions =  JSON.parse(await (await res.blob()).text());
+    switch (language) {
+        case "java":
+            switch (framework) {
+                case "rendering":
+                    return versions.java.rendering;
+            }
+            break;
+        case "ts": 
+            break;
     }
-    return release.tag_name;
+    return "-1";
 }
 
 export async function getToolVersion() {
-    const res = await fetch(`https://files.mvteam.dev/mvc-version`, {
+    const res = await fetch(`https://files.mvteam.dev/version`, {
         method: "GET"
     });
-    return (await (await res.blob()).text()).trimEnd();
+    const versions: Versions =  JSON.parse(await (await res.blob()).text());
+    return versions.mvc;
 }
 
 export async function getRelease(repo: string) {

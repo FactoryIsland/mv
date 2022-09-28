@@ -1,5 +1,5 @@
 import { ConfigFile, getConfig, writeConfig } from "../file.ts";
-import { getRelease, getRepo, getVersion, updateVersion } from "./repos.ts";
+import { getRelease, getVersion, updateVersion } from "./repos.ts";
 import { download, Destination } from "../download/download.ts";
 import { sh } from "../utils.ts";
 
@@ -19,9 +19,7 @@ export async function update() {
     
     console.log("Finding version...");
 
-    const link = getRepo(config.language, config.framework);
-
-    const version = await getVersion(link);
+    const version = await getVersion(config.language, config.framework);
 
     if (version == "-1" || version == null) {
         console.log("Language or framework invalid, or github link failed...");
@@ -40,7 +38,8 @@ export async function update() {
 
 export async function updateJavaRender() {
     console.log("Checking assets...");
-    const release = await getRelease(getRepo("java", "render"));
+    const version = await getVersion("java", "rendering");
+    const release = await getRelease(`https://github.com/TeamMV/mvc/releases/download/${version}/rendering.jar`);
     if (release == null) {
         console.log("Assets not found!");
         return;
