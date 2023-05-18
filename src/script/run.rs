@@ -67,6 +67,11 @@ fn get_str(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> 
     }
 }
 
+fn parse_variable(buffer: &mut ByteBuffer, variables: &[Variable], args: &[String]) -> Variable {
+
+    Variable::Null
+}
+
 pub fn run_mvb(code: &[u8], args: Vec<String>) {
     let mut buffer = ByteBuffer::from_bytes(code);
     let mut variables: Vec<Variable> = Vec::new();
@@ -77,11 +82,12 @@ pub fn run_mvb(code: &[u8], args: Vec<String>) {
         match codec {
             NOOP => {}
             END => break,
-            STORE => {
+            MOV => {
                 let id = buffer.pop_u32().unwrap() as usize;
                 while variables.len() >= id {
                     variables.push(Variable::Null);
                 }
+                let variable = parse_variable(&mut buffer, &variables, &args);
             }
             JMP => {
                 let addr = buffer.pop_u32().unwrap() as usize;
