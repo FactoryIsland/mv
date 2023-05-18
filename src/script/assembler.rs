@@ -212,7 +212,7 @@ pub fn assemble(input: String) -> Vec<u8> {
         }
         addresses.push(index);
         index += 1;
-        match s {
+        match s.to_ascii_uppercase().as_str() {
             "NOP" => buffer.push_u8(NOOP),
             "END" => {
                 buffer.push_u8(END);
@@ -281,9 +281,9 @@ pub fn assemble(input: String) -> Vec<u8> {
             "CALL" => {
                 buffer.push_u8(CALL);
                 let call = tokens.next().unwrap();
-                if BUILTIN_FUNCTIONS.contains(&call) {
+                if BUILTIN_FUNCTIONS.contains(&call.to_ascii_uppercase().as_str()) {
                     buffer.push_u8(BUILTIN as u8);
-                    buffer.push_string(call);
+                    buffer.push_string(call.to_ascii_uppercase().as_str());
                     index += call.len() as u32 + 5;
                     continue;
                 }
