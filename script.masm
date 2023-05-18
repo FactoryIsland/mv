@@ -1,3 +1,4 @@
 GIT_ADD %0
 GIT_COMMIT %1
 GIT_PUSH_UPSTREAM
+PRINT #"Hello world!"

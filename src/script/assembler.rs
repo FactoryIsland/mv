@@ -1,5 +1,6 @@
 use bytebuffer::ByteBuffer;
 use mvutils::save::Saver;
+use mvutils::utils::remove_quotes;
 use crate::script::consts::*;
 
 fn err(str: String) {
@@ -20,6 +21,7 @@ fn push_str_var(buffer: &mut ByteBuffer, token: &str) {
 }
 
 pub fn assemble(input: String) -> Vec<u8> {
+    let input = remove_quotes(&input);
     let mut buffer = ByteBuffer::new();
     let mut tokens = input.split_whitespace();
 

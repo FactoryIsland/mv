@@ -21,6 +21,9 @@ fn main() {
     //    "help" => { /*print_help()*/ }
     //    _ => { /*print_help();*/ }
     //}
+
+    help();
+
     let mut file = OpenOptions::new().read(true).open("script.masm").unwrap();
     let mut assembly = String::new();
     file.read_to_string(&mut assembly).unwrap();
@@ -28,5 +31,5 @@ fn main() {
     let bytecode = assemble(assembly);
     let mut file = OpenOptions::new().create(true).write(true).truncate(true).open("script.mv").unwrap();
     file.write_all(&bytecode).unwrap();
-    run_mvb(&bytecode, vec!["*".to_string(), "Assembly compilation".to_string()]);
+    run_mvb(&bytecode, vec!["*".to_string(), "Help menu".to_string()]);
 }
