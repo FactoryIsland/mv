@@ -14,7 +14,7 @@ fn push_str_var(buffer: &mut ByteBuffer, token: &str) {
     let str = chars.as_str();
     buffer.push_u8(ident as u8);
     match ident {
-        LITERAL => buffer.push_string(str),
+        LITERAL => buffer.push_string(&str.replace("\\s", " ")),
         VARIABLE | ARGUMENT => buffer.push_u32(str.parse::<u32>().unwrap()),
         _ => err(format!("Invalid string identifier: {}", ident))
     }
