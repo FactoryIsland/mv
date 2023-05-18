@@ -3,6 +3,7 @@ use std::io::{Error, Write};
 use std::process::Command;
 use bytebuffer::ByteBuffer;
 use mvutils::save::Loader;
+use crate::script::consts::*;
 
 fn err(str: String) {
     eprintln!("{}", str);
@@ -11,20 +12,17 @@ fn err(str: String) {
 
 fn get_str_any(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> String {
     let ident = buffer.pop_u8().unwrap() as char;
-    if ident == '#' {
-        //literal
+    if ident == LITERAL {
         buffer.pop_string().unwrap()
     }
-    else if ident == '$' {
-        //variable
+    else if ident == VARIABLE {
         let index = buffer.pop_u32().unwrap();
         if index >= variables.len() as u32 {
             err(format!("Argument id {} out of range!", index));
         }
         variables[index as usize].to_string()
     }
-    else if ident == '%' {
-        //argument
+    else if ident == ARGUMENT {
         let id = buffer.pop_u32().unwrap();
         if id >= args.len() as u32 {
             err(format!("Argument id {} out of range!", id));
@@ -39,12 +37,10 @@ fn get_str_any(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable])
 
 fn get_str(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> String {
     let ident = buffer.pop_u8().unwrap() as char;
-    if ident == '#' {
-        //literal
+    if ident == LITERAL {
         buffer.pop_string().unwrap()
     }
-    else if ident == '$' {
-        //variable
+    else if ident == VARIABLE {
         let index = buffer.pop_u32().unwrap();
         if index >= variables.len() as u32 {
             err(format!("Argument id {} out of range!", index));
@@ -58,8 +54,7 @@ fn get_str(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> 
             String::new()
         }
     }
-    else if ident == '%' {
-        //argument
+    else if ident == ARGUMENT {
         let id = buffer.pop_u32().unwrap();
         if id >= args.len() as u32 {
             err(format!("Argument id {} out of range!", id));
@@ -80,33 +75,33 @@ pub fn run_mvb(code: &[u8], args: Vec<String>) {
         if codec.is_none() { break; }
         let codec = codec.unwrap();
         match codec {
-            0 => {} //noop
-            20 => { //display
+            NOOP => {}
+            DISPLAY => {
                 let str = get_str_any(&mut buffer, &args, &variables);
                 println!("{}", str);
             }
-            21 => { //sh
+            SH => {
                 let str = get_str(&mut buffer, &args, &variables);
                 Command::new("sh").arg("-c").arg(format!("\"{}\"", str)).spawn().unwrap().wait().unwrap();
             }
-            22 => { //git add all
+            GIT_ADD_ALL => {
                 Command::new("git").arg("add").arg("*").spawn().unwrap().wait().unwrap();
             }
-            23 => { //git add
+            GIT_ADD => {
                 let str = get_str(&mut buffer, &args, &variables);
                 Command::new("git").arg("add").arg(str).spawn().unwrap().wait().unwrap();
             }
-            24 => { //git commit default
+            GIT_COMMIT_DEFAULT => {
                 Command::new("git").arg("commit").arg("-m").arg("\"\"").spawn().unwrap().wait().unwrap();
             }
-            25 => { //git commit
+            GIT_COMMIT => {
                 let str = get_str(&mut buffer, &args, &variables);
                 Command::new("git").arg("commit").arg("-m").arg(format!("\"{}\"", str)).spawn().unwrap().wait().unwrap();
             }
-            26 => { //git push to upstream
+            GIT_PUSH_UPSTREAM => {
                 Command::new("git").arg("push").spawn().unwrap().wait().unwrap();
             }
-            27 => { //git push
+            GIT_PUSH => {
                 let str = get_str(&mut buffer, &args, &variables);
                 Command::new("git").arg("push").args(str.split(" ")).spawn().unwrap().wait().unwrap();
             }
