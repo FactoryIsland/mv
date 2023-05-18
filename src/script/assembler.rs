@@ -403,20 +403,14 @@ pub fn assemble(input: String) -> Vec<u8> {
                 buffer.push_u8(SH);
                 index += push_str_var(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
             }
-            "GIT_ADD_ALL" => buffer.push_u8(GIT_ADD_ALL),
-            "GIT_ADD" => {
-                buffer.push_u8(GIT_ADD);
-                index += push_str_var(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+            "PUSH_RET" => {
+                buffer.push_u8(PUSH_RET);
+                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
             }
-            "GIT_COMMIT_DEFAULT" => buffer.push_u8(GIT_COMMIT_DEFAULT),
-            "GIT_COMMIT" => {
-                buffer.push_u8(GIT_COMMIT);
-                index += push_str_var(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
-            }
-            "GIT_PUSH_UPSTREAM" => buffer.push_u8(GIT_PUSH_UPSTREAM),
-            "GIT_PUSH" => {
-                buffer.push_u8(GIT_PUSH);
-                index += push_str_var(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+            "POP_RET" => {
+                buffer.push_u8(POP_RET);
+                named!(names, buffer, tokens, next_var);
+                index += 4;
             }
             _ => err(format!("Unknown instruction: {}", s)),
         }

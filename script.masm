@@ -1,5 +1,11 @@
+.named
+.get_message
+PUSH_RET #"MVScript bytecode and assemblt finished"
+RET
 .main
-PUSH #"Assembly and bytecode works!"
+CALL get_message
+POP_RET message
+PUSH $message
 CALL GIT_ADD_ALL
 CALL GIT_COMMIT
 CALL GIT_PUSH_UPSTREAM

@@ -123,6 +123,7 @@ pub fn run(code: &[u8], args: Vec<String>) {
     let mut call_stack: Vec<usize> = Vec::new();
     let mut arg_stack: Vec<Variable> = Vec::new();
     let mut cmp = Cmp::Empty;
+    let mut ret = Variable::Null;
 
     let main = buffer.pop_u32().unwrap();
     if main >= buffer.len() as u32 {
@@ -314,6 +315,16 @@ pub fn run(code: &[u8], args: Vec<String>) {
             SH => {
                 let str = get_str(&mut buffer, &args, &variables);
                 Command::new("sh").arg("-c").arg(format!("\"{}\"", str)).spawn().unwrap().wait().unwrap();
+            }
+            PUSH_RET => {
+                ret = parse_variable(&mut buffer, &mut variables, &args, false);
+            }
+            POP_RET => {
+                let id = buffer.pop_u32().unwrap() as usize;
+                if variables.len() <= id {
+                    variables.resize(id + 1, Variable::Null);
+                }
+                variables[id] = ret.take();
             }
             _ => err(format!("Unknown codec: {}!", codec)),
         }
@@ -789,11 +800,11 @@ fn call_function(name: String, stack: &mut Vec<Variable>) {
             Command::new("git").arg("add").arg(str).spawn().unwrap().wait().unwrap();
         }
         "GIT_COMMIT_DEFAULT" => {
-            Command::new("git").arg("commit").arg("-m").arg("\"\"").spawn().unwrap().wait().unwrap();
+            Command::new("git").arg("commit").arg("-m").arg("").spawn().unwrap().wait().unwrap();
         }
         "GIT_COMMIT" => {
             let str = stack.pop().unwrap().not_null().string();
-            Command::new("git").arg("commit").arg("-m").arg(format!("\"{}\"", str)).spawn().unwrap().wait().unwrap();
+            Command::new("git").arg("commit").arg("-m").arg(format!("{}", str)).spawn().unwrap().wait().unwrap();
         }
         "GIT_PUSH_UPSTREAM" => {
             Command::new("git").arg("push").spawn().unwrap().wait().unwrap();

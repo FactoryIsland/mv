@@ -33,12 +33,8 @@ pub const PUSH: u8 = 29;
 pub const POP: u8 = 30;
 pub const PRINT: u8 = 31;
 pub const SH: u8 = 32;
-pub const GIT_ADD_ALL: u8 = 33;
-pub const GIT_ADD: u8 = 34;
-pub const GIT_COMMIT_DEFAULT: u8 = 35;
-pub const GIT_COMMIT: u8 = 36;
-pub const GIT_PUSH_UPSTREAM: u8 = 37;
-pub const GIT_PUSH: u8 = 38;
+pub const PUSH_RET: u8 = 33;
+pub const POP_RET: u8 = 34;
 
 pub const BUILTIN_FUNCTIONS: [&str; 6] = [
     "GIT_ADD_ALL",
