@@ -16,6 +16,13 @@ pub fn help() {
         .ln()
         .col_forln(Blue, "mvc help").textln("Displays this menu.").ln()
         .col_forln(Blue, "mvc push [\"push msg\"]").textln("Pushes the project to github with an optional commit message. Default is \"committed at <date>\".").ln()
-        .col_forln(Blue, "mvc pull").text("Pulls the project from github")
+        .col_forln(Blue, "mvc pull").textln("Pulls the project from github")
         .flush()
+
+        /*
+        python: name = value
+        js/rust: let name = value
+        java: type name = value
+        SQL: DEcLaRe VarIAbLe name type = value
+         */
 }

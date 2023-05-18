@@ -76,6 +76,17 @@ pub fn run_mvb(code: &[u8], args: Vec<String>) {
         let codec = codec.unwrap();
         match codec {
             NOOP => {}
+            END => break,
+            STORE => {
+                let id = buffer.pop_u32().unwrap() as usize;
+                while variables.len() >= id {
+                    variables.push(Variable::Null);
+                }
+            }
+            JMP => {
+                let addr = buffer.pop_u32().unwrap() as usize;
+                buffer.set_rpos(addr);
+            }
             PRINT => {
                 let str = get_str_any(&mut buffer, &args, &variables);
                 println!("{}", str);
@@ -115,7 +126,7 @@ enum Variable {
     Int(i32),
     Float(f32),
     Bool(bool),
-    None
+    Null
 }
 
 impl Variable {
@@ -125,7 +136,7 @@ impl Variable {
             Variable::Int(i) => format!("{}", i),
             Variable::Float(f) => format!("{}", f),
             Variable::Bool(b) => format!("{}", b),
-            _ => "null".to_string()
+            Variable::Null => "null".to_string()
         }
     }
 }
