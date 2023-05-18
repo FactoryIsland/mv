@@ -1,5 +1,5 @@
 pub const NOOP: u8 = 0;
-pub const DISPLAY: u8 = 20;
+pub const PRINT: u8 = 20;
 pub const SH: u8 = 21;
 pub const GIT_ADD_ALL: u8 = 22;
 pub const GIT_ADD: u8 = 23;

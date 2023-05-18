@@ -76,7 +76,7 @@ pub fn run_mvb(code: &[u8], args: Vec<String>) {
         let codec = codec.unwrap();
         match codec {
             NOOP => {}
-            DISPLAY => {
+            PRINT => {
                 let str = get_str_any(&mut buffer, &args, &variables);
                 println!("{}", str);
             }

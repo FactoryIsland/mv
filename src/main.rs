@@ -28,5 +28,5 @@ fn main() {
     let bytecode = assemble(assembly);
     let mut file = OpenOptions::new().create(true).write(true).truncate(true).open("script.mv").unwrap();
     file.write_all(&bytecode).unwrap();
-    run_mvb(&bytecode, vec![String::from("Basic script execution")]);
+    run_mvb(&bytecode, vec!["*".to_string(), "Assembly compilation".to_string()]);
 }

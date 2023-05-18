@@ -26,8 +26,8 @@ pub fn assemble(input: String) -> Vec<u8> {
     while let Some(s) = tokens.next() {
         match s {
             "NOP" => buffer.push_u8(NOOP),
-            "DISPLAY" => {
-                buffer.push_u8(DISPLAY);
+            "PRINT" => {
+                buffer.push_u8(PRINT);
                 push_str_var(&mut buffer, tokens.next().unwrap());
             }
             "SH" => {
