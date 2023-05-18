@@ -7,5 +7,5 @@ call get_message
 pop_ret message
 push $message
 call git_add_all
-CALL GIT_COMMIT
-CALL git_push_upstream
+call git_commit
+call git_push_upstream

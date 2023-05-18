@@ -35,6 +35,7 @@ pub const PRINT: u8 = 31;
 pub const SH: u8 = 32;
 pub const PUSH_RET: u8 = 33;
 pub const POP_RET: u8 = 34;
+pub const CPY: u8 = 35;
 
 pub const BUILTIN_FUNCTIONS: [&str; 6] = [
     "GIT_ADD_ALL",

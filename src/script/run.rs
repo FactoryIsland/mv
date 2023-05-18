@@ -326,6 +326,14 @@ pub fn run(code: &[u8], args: Vec<String>) {
                 }
                 variables[id] = ret.take();
             }
+            CPY => {
+                let id = buffer.pop_u32().unwrap() as usize;
+                if variables.len() <= id {
+                    variables.resize(id + 1, Variable::Null);
+                }
+                let variable = parse_variable(&mut buffer, &mut variables, &args, false);
+                variables[id] = variable;
+            }
             _ => err(format!("Unknown codec: {}!", codec)),
         }
     }

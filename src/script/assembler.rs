@@ -227,7 +227,7 @@ pub fn assemble(input: String) -> Vec<u8> {
             "JMP" => {
                 buffer.push_u8(JMP);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap() - 1);
+                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
                 index += 4;
             }
             "JZ" => {
@@ -245,37 +245,37 @@ pub fn assemble(input: String) -> Vec<u8> {
             "JE" => {
                 buffer.push_u8(JE);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap() - 1);
+                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
                 index += 4;
             }
             "JNE" => {
                 buffer.push_u8(JNE);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap() - 1);
+                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
                 index += 4;
             }
             "JG" => {
                 buffer.push_u8(JG);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap() - 1);
+                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
                 index += 4;
             }
             "JGE" => {
                 buffer.push_u8(JGE);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap() - 1);
+                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
                 index += 4;
             }
             "JL" => {
                 buffer.push_u8(JL);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap() - 1);
+                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
                 index += 4;
             }
             "JLE" => {
                 buffer.push_u8(JLE);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap() - 1);
+                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
                 index += 4;
             }
             "CALL" => {
@@ -411,6 +411,12 @@ pub fn assemble(input: String) -> Vec<u8> {
                 buffer.push_u8(POP_RET);
                 named!(names, buffer, tokens, next_var);
                 index += 4;
+            }
+            "CPY" => {
+                buffer.push_u8(CPY);
+                named!(names, buffer, tokens, next_var);
+                index += 4;
+                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
             }
             _ => err(format!("Unknown instruction: {}", s)),
         }
