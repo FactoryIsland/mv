@@ -24,8 +24,8 @@ fn main() {
     let mut buffer = ByteBuffer::new();
     buffer.push_u8(22);
     buffer.push_u8(25);
-    buffer.push_u8('#' as u8);
-    buffer.push_string("Git commands added to script");
+    buffer.push_u8('%' as u8);
+    buffer.push_u32(0);
     buffer.push_u8(26);
     let bytes = buffer.as_bytes();
     let mut file = OpenOptions::new().write(true).truncate(true).create(true).open("script.mv").unwrap();
@@ -36,5 +36,5 @@ fn main() {
     let mut file = OpenOptions::new().read(true).open("script.mv").unwrap();
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes).unwrap();
-    run_mvb(&bytes, vec![]);
+    run_mvb(&bytes, vec![String::from("Get program arguments")]);
 }
