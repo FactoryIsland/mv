@@ -1,3 +1,5 @@
-PRINT #"Hello world!"
-MOV 0 0
-PRINT $0
+.main
+PUSH #"Assembly and bytecode works!"
+CALL GIT_ADD_ALL
+CALL GIT_COMMIT
+CALL GIT_PUSH_UPSTREAM
