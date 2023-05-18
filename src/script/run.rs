@@ -1,5 +1,3 @@
-use std::fs::{OpenOptions, remove_file};
-use std::io::{Error, Write};
 use std::process::Command;
 use bytebuffer::ByteBuffer;
 use mvutils::save::Loader;
@@ -43,7 +41,7 @@ fn get_str(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> 
     else if ident == VARIABLE {
         let index = buffer.pop_u32().unwrap();
         if index >= variables.len() as u32 {
-            err(format!("Argument id {} out of range!", index));
+            err(format!("Variable id {} out of range!", index));
         }
         let var = &variables[index as usize];
         if let Variable::String(s) = var {
@@ -67,9 +65,46 @@ fn get_str(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> 
     }
 }
 
-fn parse_variable(buffer: &mut ByteBuffer, variables: &[Variable], args: &[String]) -> Variable {
-
-    Variable::Null
+fn parse_variable(buffer: &mut ByteBuffer, variables: &mut [Variable], args: &[String], take: bool) -> Variable {
+    let ident = buffer.pop_u8().unwrap() as char;
+    match ident {
+        LITERAL => Variable::String(buffer.pop_string().unwrap()),
+        VARIABLE => {
+            let index = buffer.pop_u32().unwrap();
+            if index >= variables.len() as u32 {
+                err(format!("Variable id {} out of range!", index));
+            }
+            if take {
+                variables[index as usize].take()
+            }
+            else {
+                variables[index as usize].clone()
+            }
+        }
+        ARGUMENT => {
+            let id = buffer.pop_u32().unwrap();
+            if id >= args.len() as u32 {
+                err(format!("Argument id {} out of range!", id));
+            }
+            Variable::String(args[id as usize].clone())
+        }
+        INTEGER => {
+            let value = buffer.pop_i32().unwrap();
+            Variable::Int(value)
+        }
+        FLOAT => {
+            let value = buffer.pop_f32().unwrap();
+            Variable::Float(value)
+        }
+        BOOLEAN => {
+            let value = buffer.pop_u8().unwrap() != 0;
+            Variable::Bool(value)
+        }
+        _ => {
+            err(format!("Unknown variable identifier: {}!", ident as u8));
+            Variable::Null
+        }
+    }
 }
 
 pub fn run_mvb(code: &[u8], args: Vec<String>) {
@@ -87,7 +122,8 @@ pub fn run_mvb(code: &[u8], args: Vec<String>) {
                 while variables.len() >= id {
                     variables.push(Variable::Null);
                 }
-                let variable = parse_variable(&mut buffer, &variables, &args);
+                let variable = parse_variable(&mut buffer, &mut variables, &args, true);
+                variables[id] = variable;
             }
             JMP => {
                 let addr = buffer.pop_u32().unwrap() as usize;
@@ -127,11 +163,13 @@ pub fn run_mvb(code: &[u8], args: Vec<String>) {
     }
 }
 
+#[derive(Clone, PartialEq, Debug, Default)]
 enum Variable {
     String(String),
     Int(i32),
     Float(f32),
     Bool(bool),
+    #[default]
     Null
 }
 
@@ -144,5 +182,9 @@ impl Variable {
             Variable::Bool(b) => format!("{}", b),
             Variable::Null => "null".to_string()
         }
+    }
+
+    pub fn take(&mut self) -> Variable {
+        std::mem::replace(self, Variable::Null)
     }
 }

@@ -22,7 +22,7 @@ fn main() {
     //    _ => { /*print_help();*/ }
     //}
 
-    help();
+    //help();
 
     let mut file = OpenOptions::new().read(true).open("script.masm").unwrap();
     let mut assembly = String::new();

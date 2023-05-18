@@ -1,6 +1,4 @@
-use std::io::Write;
-use std::time::Duration;
-use mvutils::print::{Col, Printer};
+use mvutils::print::Printer;
 use mvutils::print::Col::*;
 use mvutils::print::Fmt::*;
 

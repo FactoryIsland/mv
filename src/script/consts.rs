@@ -14,3 +14,6 @@ pub const GIT_PUSH: u8 = 27;
 pub const LITERAL: char = '#';
 pub const ARGUMENT: char = '%';
 pub const VARIABLE: char = '$';
+pub const INTEGER: char = 'i';
+pub const FLOAT: char = 'f';
+pub const BOOLEAN: char = 'b';

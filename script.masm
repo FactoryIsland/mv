@@ -1,6 +1,3 @@
 PRINT #"Hello world!"
-STORE 0 0
+MOV 0 0
 PRINT $0
-INC $0
-CMP $0 10
-JL 3
