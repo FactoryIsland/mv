@@ -1,5 +1,4 @@
 pub mod msg;
-pub mod fmt;
 pub mod script;
 
 use std::env::args;
@@ -36,5 +35,5 @@ fn main() {
     let mut file = OpenOptions::new().read(true).open("script.mv").unwrap();
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes).unwrap();
-    run_mvb(&bytes, vec![String::from("Get program arguments")]);
+    run_mvb(&bytes, vec![String::from("Basic script execution")]);
 }

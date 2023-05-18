@@ -74,7 +74,6 @@ fn get_str(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> 
 
 pub fn run_mvb(code: &[u8], args: Vec<String>) {
     let mut buffer = ByteBuffer::from_bytes(code);
-    let mut stack: Vec<u8> = Vec::new();
     let mut variables: Vec<Variable> = Vec::new();
     loop {
         let codec = buffer.pop_u8();
@@ -88,11 +87,7 @@ pub fn run_mvb(code: &[u8], args: Vec<String>) {
             }
             21 => { //sh
                 let str = get_str(&mut buffer, &args, &variables);
-                let mut file = OpenOptions::new().write(true).append(true).create(true).open("tmp.sh").unwrap();
-                file.write_all(str.as_bytes()).unwrap();
-                file.flush().unwrap();
-                Command::new("sh").arg("tmp.sh").spawn().unwrap().wait().unwrap();
-                remove_file("tmp.sh").unwrap();
+                Command::new("sh").arg("-c").arg(format!("\"{}\"", str)).spawn().unwrap().wait().unwrap();
             }
             22 => { //git add all
                 Command::new("git").arg("add").arg("*").spawn().unwrap().wait().unwrap();
@@ -102,7 +97,7 @@ pub fn run_mvb(code: &[u8], args: Vec<String>) {
                 Command::new("git").arg("add").arg(str).spawn().unwrap().wait().unwrap();
             }
             24 => { //git commit default
-                Command::new("git").arg("commit").arg("-m").arg("\"Commit\"").spawn().unwrap().wait().unwrap();
+                Command::new("git").arg("commit").arg("-m").arg("\"\"").spawn().unwrap().wait().unwrap();
             }
             25 => { //git commit
                 let str = get_str(&mut buffer, &args, &variables);
