@@ -31,5 +31,5 @@ fn main() {
     let bytecode = assemble(assembly);
     let mut file = OpenOptions::new().create(true).write(true).truncate(true).open("script.mv").unwrap();
     file.write_all(&bytecode).unwrap();
-    run_mvb(&bytecode, vec!["*".to_string(), "Help menu".to_string()]);
+    run_mvb(&bytecode, vec!["*".to_string(), "Fixed assembler strings".to_string()]);
 }

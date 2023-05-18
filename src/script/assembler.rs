@@ -14,7 +14,7 @@ fn push_str_var(buffer: &mut ByteBuffer, token: &str) {
     let str = chars.as_str();
     buffer.push_u8(ident as u8);
     match ident {
-        LITERAL => buffer.push_string(&str.replace("\\s", " ")),
+        LITERAL => buffer.push_string(&format_escaped(str)),
         VARIABLE | ARGUMENT => buffer.push_u32(str.parse::<u32>().unwrap()),
         _ => err(format!("Invalid string identifier: {}", ident))
     }
@@ -56,4 +56,50 @@ pub fn assemble(input: String) -> Vec<u8> {
     }
 
     buffer.into_vec()
+}
+
+fn format_escaped(input: &str) -> String {
+    let mut output = String::new();
+    let mut chars = input.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.peek() {
+                Some('f') => {
+                    output.push('\x0C');
+                }
+                Some('b') => {
+                    output.push('\x08');
+                }
+                Some('s') => {
+                    output.push(' ');
+                }
+                Some('r') => {
+                    output.push('\r');
+                }
+                Some('n') => {
+                    output.push('\n');
+                }
+                Some('t') => {
+                    output.push('\t');
+                }
+                Some('0') => {
+                    output.push('\0');
+                }
+                Some('\\') => {
+                    output.push('\\');
+                }
+                Some(c) => {
+                    output.push(*c);
+                }
+                None => {
+                    panic!("Character after escape sequence not found!");
+                }
+            }
+            chars.next();
+        } else {
+            output.push(c);
+        }
+    }
+    output
 }
