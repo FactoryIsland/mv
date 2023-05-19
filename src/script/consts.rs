@@ -52,3 +52,11 @@ pub const INTEGER: char = 'i';
 pub const FLOAT: char = 'f';
 pub const BOOLEAN_TRUE: char = 1 as char;
 pub const BOOLEAN_FALSE: char = 0 as char;
+
+pub const BUILTIN_UNKNOWN: u32 = 0;
+pub const BUILTIN_GIT_ADD_ALL: u32 = 1;
+pub const BUILTIN_GIT_ADD: u32 = 2;
+pub const BUILTIN_GIT_COMMIT_DEFAULT: u32 = 3;
+pub const BUILTIN_GIT_COMMIT: u32 = 4;
+pub const BUILTIN_GIT_PUSH_UPSTREAM: u32 = 5;
+pub const BUILTIN_GIT_PUSH: u32 = 6;

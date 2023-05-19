@@ -289,8 +289,8 @@ pub fn assemble(input: String) -> Vec<u8> {
                 let call = tokens.next().unwrap();
                 if BUILTIN_FUNCTIONS.contains(&call.to_ascii_uppercase().as_str()) {
                     buffer.push_u8(BUILTIN as u8);
-                    buffer.push_string(call.to_ascii_uppercase().as_str());
-                    index += call.len() as u32 + 5;
+                    buffer.push_u32(builtin(call.to_ascii_uppercase().as_str()));
+                    index += 5;
                     continue;
                 }
                 if !idents.contains_key(call) {
@@ -456,4 +456,16 @@ pub fn assemble(input: String) -> Vec<u8> {
     }
 
     buffer.into_vec()
+}
+
+fn builtin(name: &str) -> u32 {
+    match name {
+        "GIT_ADD_ALL" => BUILTIN_GIT_ADD_ALL,
+        "GIT_ADD" => BUILTIN_GIT_ADD,
+        "GIT_COMMIT_DEFAULT" => BUILTIN_GIT_COMMIT_DEFAULT,
+        "GIT_COMMIT" => BUILTIN_GIT_COMMIT,
+        "GIT_PUSH_UPSTREAM" => BUILTIN_GIT_PUSH_UPSTREAM,
+        "GIT_PUSH" => BUILTIN_GIT_PUSH,
+        _ => BUILTIN_UNKNOWN
+    }
 }

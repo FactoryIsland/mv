@@ -203,8 +203,7 @@ pub fn run(code: &[u8], args: Vec<String>) {
                 let pos = buffer.get_rpos();
                 let ident = buffer.pop_u8().unwrap() as char;
                 if ident == BUILTIN {
-                    let name = buffer.pop_string().unwrap();
-                    call_function(name, &mut arg_stack);
+                    call_function(buffer.pop_u32().unwrap(), &mut arg_stack);
                 }
                 else {
                     buffer.set_rpos(pos);
@@ -798,31 +797,31 @@ enum Cmp {
     Less,
 }
 
-fn call_function(name: String, stack: &mut Vec<Variable>) {
-    match name.as_str() {
-        "GIT_ADD_ALL" => {
+fn call_function(id: u32, stack: &mut Vec<Variable>) {
+    match id {
+        BUILTIN_GIT_ADD_ALL => {
             Command::new("git").arg("add").arg("*").spawn().unwrap().wait().unwrap();
         }
-        "GIT_ADD" => {
+        BUILTIN_GIT_ADD => {
             let str = stack.pop().unwrap().not_null().string();
             Command::new("git").arg("add").arg(str).spawn().unwrap().wait().unwrap();
         }
-        "GIT_COMMIT_DEFAULT" => {
+        BUILTIN_GIT_COMMIT_DEFAULT => {
             Command::new("git").arg("commit").arg("-m").arg("").spawn().unwrap().wait().unwrap();
         }
-        "GIT_COMMIT" => {
+        BUILTIN_GIT_COMMIT => {
             let str = stack.pop().unwrap().not_null().string();
             Command::new("git").arg("commit").arg("-m").arg(format!("{}", str)).spawn().unwrap().wait().unwrap();
         }
-        "GIT_PUSH_UPSTREAM" => {
+        BUILTIN_GIT_PUSH_UPSTREAM => {
             Command::new("git").arg("push").spawn().unwrap().wait().unwrap();
         }
-        "GIT_PUSH" => {
+        BUILTIN_GIT_PUSH => {
             let str = stack.pop().unwrap().not_null().string();
             Command::new("git").arg("push").arg("-u").args(str.split(" ")).spawn().unwrap().wait().unwrap();
         }
         _ => {
-            err(format!("Unknown function: {}", name));
+            err(format!("Unknown built-in function id: {}", id));
         }
     }
 }

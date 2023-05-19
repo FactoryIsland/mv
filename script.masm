@@ -9,5 +9,5 @@
     ret
 .message
     mov message 10
-    push_ret #"Local variables in assembly"
+    push_ret #"Shorter builtin function calls in bytecode"
     ret
