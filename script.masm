@@ -8,5 +8,6 @@
     call git_push_upstream
     ret
 .message
-    push_ret #"Fixed jump instruction"
+    mov message 10
+    push_ret #"Local variables in assembly"
     ret

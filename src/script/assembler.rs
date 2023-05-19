@@ -12,13 +12,14 @@ fn err(str: String) {
 static mut NAMED: bool = false;
 
 macro_rules! named_var {
-    ($names:ident, $buffer:ident, $token:ident, $next:ident) => {
+    ($names:ident, $buffer:ident, $token:ident, $next:ident, $func:ident) => {
         if unsafe { NAMED } {
-            if $names.contains_key($token) {
-                $buffer.push_u32(*$names.get($token).unwrap());
+            let t = format!("{}_{}", $func, $token);
+            if $names.contains_key(&t) {
+                $buffer.push_u32(*$names.get(&t).unwrap());
             }
             else {
-                $names.insert($token.to_string(), *$next);
+                $names.insert(t, *$next);
                 $buffer.push_u32(*$next);
                 *$next += 1;
             }
@@ -29,7 +30,7 @@ macro_rules! named_var {
     };
 }
 
-fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32) -> u32 {
+fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str) -> u32 {
     let mut chars = token.chars();
     let ident = chars.next().unwrap();
     let str = chars.as_str();
@@ -42,7 +43,7 @@ fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             offset += str.len() as u32 + 4;
         },
         VARIABLE | ARGUMENT => {
-            named_var!(names, buffer, str, next_var);
+            named_var!(names, buffer, str, next_var, func);
             offset += 4;
         },
         _ => err(format!("Invalid string identifier: {}", ident))
@@ -50,7 +51,7 @@ fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
     offset
 }
 
-fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32) -> u32 {
+fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str) -> u32 {
     let ident = token.chars().next().unwrap();
     match ident {
         LITERAL => {
@@ -62,7 +63,7 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
         VARIABLE | ARGUMENT => {
             buffer.push_u8(ident as u8);
             let token = token.split_at(1).1;
-            named_var!(names, buffer, token, next_var);
+            named_var!(names, buffer, token, next_var, func);
             5
         }
         _ => {
@@ -86,7 +87,7 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
     }
 }
 
-fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32) -> u32 {
+fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str) -> u32 {
     let ident = token.chars().next().unwrap();
     match ident {
         LITERAL => {
@@ -96,7 +97,7 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
         VARIABLE | ARGUMENT => {
             buffer.push_u8(ident as u8);
             let token = token.split_at(1).1;
-            named_var!(names, buffer, token, next_var);
+            named_var!(names, buffer, token, next_var, func);
             5
         }
         _ => {
@@ -120,7 +121,7 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
     }
 }
 
-fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32) -> u32 {
+fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str) -> u32 {
     let ident = token.chars().next().unwrap();
     match ident {
         LITERAL => {
@@ -130,7 +131,7 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
         VARIABLE | ARGUMENT => {
             buffer.push_u8(ident as u8);
             let token = token.split_at(1).1;
-            named_var!(names, buffer, token, next_var);
+            named_var!(names, buffer, token, next_var, func);
             5
         }
         _ => {
@@ -152,14 +153,14 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
 }
 
 macro_rules! named {
-    ($names:ident, $buffer:ident, $tokens:ident, $next:ident) => {
+    ($names:ident, $buffer:ident, $tokens:ident, $next:ident, $func:ident) => {
         if unsafe { NAMED } {
-            let ident = $tokens.next().unwrap();
-            if $names.contains_key(ident) {
-                $buffer.push_u32(*$names.get(ident).unwrap());
+            let ident = format!("{}_{}", $func, $tokens.next().unwrap());
+            if $names.contains_key(&ident) {
+                $buffer.push_u32(*$names.get(&ident).unwrap());
             }
             else {
-                $names.insert(ident.to_string(), $next);
+                $names.insert(ident, $next);
                 $buffer.push_u32($next);
                 $next += 1;
             }
@@ -180,6 +181,7 @@ pub fn assemble(input: String) -> Vec<u8> {
     let mut calls = Vec::new();
     let mut names: HashMap<String, u32> = HashMap::new();
     let mut next_var = 0;
+    let mut func = "".to_string();
     let mut idents: HashMap<String, u32> = HashMap::new();
     let mut functions: Vec<u32> = Vec::new();
     let mut next_fn = 0;
@@ -206,9 +208,13 @@ pub fn assemble(input: String) -> Vec<u8> {
             if functions.len() <= id as usize {
                 functions.resize(id as usize + 1, 0);
             }
+            func = ident.to_string();
             functions[id as usize] = index;
             returned = false;
             continue;
+        }
+        if func.is_empty() {
+            println!("Found instructions outside a function! These will not be called unless jumped to!");
         }
         addresses.push(index);
         index += 1;
@@ -220,9 +226,9 @@ pub fn assemble(input: String) -> Vec<u8> {
             }
             "MOV" => {
                 buffer.push_u8(MOV);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "JMP" => {
                 buffer.push_u8(JMP);
@@ -232,15 +238,15 @@ pub fn assemble(input: String) -> Vec<u8> {
             }
             "JZ" => {
                 buffer.push_u8(JZ);
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
                 jumps.push(buffer.get_wpos());
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
             }
             "CMP" => {
                 buffer.push_u8(CMP);
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "JE" => {
                 buffer.push_u8(JE);
@@ -302,121 +308,121 @@ pub fn assemble(input: String) -> Vec<u8> {
             }
             "INC" => {
                 buffer.push_u8(INC);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
             }
             "DEC" => {
                 buffer.push_u8(DEC);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
             }
             "ADD" => {
                 buffer.push_u8(ADD);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "SUB" => {
                 buffer.push_u8(SUB);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "MUL" => {
                 buffer.push_u8(MUL);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "DIV" => {
                 buffer.push_u8(DIV);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "MOD" => {
                 buffer.push_u8(MOD);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "AND" => {
                 buffer.push_u8(AND);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_prim_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_prim_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "OR" => {
                 buffer.push_u8(OR);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_prim_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_prim_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "NOT" => {
                 buffer.push_u8(NOT);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
             }
             "NEG" => {
                 buffer.push_u8(NEG);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
             }
             "XOR" => {
                 buffer.push_u8(XOR);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_prim_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_prim_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "SHL" => {
                 buffer.push_u8(SHL);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "SHR" => {
                 buffer.push_u8(SHR);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "SAR" => {
                 buffer.push_u8(SAR);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "PUSH" => {
                 buffer.push_u8(PUSH);
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "POP" => {
                 buffer.push_u8(POP);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
             }
             "PRINT" => {
                 buffer.push_u8(PRINT);
-                index += push_str_var(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_str_var(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "SH" => {
                 buffer.push_u8(SH);
-                index += push_str_var(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_str_var(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "PUSH_RET" => {
                 buffer.push_u8(PUSH_RET);
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             "POP_RET" => {
                 buffer.push_u8(POP_RET);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
             }
             "CPY" => {
                 buffer.push_u8(CPY);
-                named!(names, buffer, tokens, next_var);
+                named!(names, buffer, tokens, next_var, func);
                 index += 4;
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var);
+                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
             }
             _ => err(format!("Unknown instruction: {}", s)),
         }
