@@ -8,5 +8,5 @@
     call git_push_upstream
     ret
 @message
-    push_ret #"Jump to label"
+    push_ret #"Global variables and comments"
     ret

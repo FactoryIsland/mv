@@ -1,17 +1,23 @@
-.named
+.named                          ; enable named variables
 @main:
-    mov a 0
-    mov b 1
+    mov a 0                     ; set a to 0
+    mov b 1                     ; set b to 1
 
-    mov counter 0
+    mov counter 0               ; counter
 
-.loop:
-    cpy c $a
+  .loop:
+    cpy c $a                    ; cpy also declares c if it has not been initialized yet
     add c $b
     mov a $b
     mov b $c
-    print $a
+    call out
 
     inc counter
-    cmp $counter 91
-    jl loop
+    cmp $counter 90
+    jle loop                    ; repeat if counter is smaller than or equal to 90
+    ret
+@out:
+    print $a                    ; we can access a here as it is global
+    ret
+
+.global a                       ; a is a global variable

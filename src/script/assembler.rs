@@ -12,16 +12,22 @@ fn err(str: String) {
 static mut NAMED: bool = false;
 
 macro_rules! named_var {
-    ($names:ident, $buffer:ident, $token:ident, $next:ident, $func:ident) => {
+    ($names:ident, $buffer:ident, $token:ident, $next:ident, $func:ident, $globals:ident) => {
         if unsafe { NAMED } {
-            let t = format!("{}_{}", $func, $token);
-            if $names.contains_key(&t) {
-                $buffer.push_u32(*$names.get(&t).unwrap());
+            let index = $globals.binary_search(&$token.to_string());
+            if let Ok(id) = index {
+                $buffer.push_u32(id as u32)
             }
             else {
-                $names.insert(t, *$next);
-                $buffer.push_u32(*$next);
-                *$next += 1;
+                let t = format!("{}_{}", $func, $token);
+                if $names.contains_key(&t) {
+                    $buffer.push_u32(*$names.get(&t).unwrap());
+                }
+                else {
+                    $names.insert(t, *$next);
+                    $buffer.push_u32(*$next);
+                    *$next += 1;
+                }
             }
         }
         else {
@@ -30,7 +36,7 @@ macro_rules! named_var {
     };
 }
 
-fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str) -> u32 {
+fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str, globals: &[String]) -> u32 {
     let mut chars = token.chars();
     let ident = chars.next().unwrap();
     let str = chars.as_str();
@@ -43,7 +49,7 @@ fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             offset += str.len() as u32 + 4;
         }
         VARIABLE => {
-            named_var!(names, buffer, str, next_var, func);
+            named_var!(names, buffer, str, next_var, func, globals);
             offset += 4;
         }
         ARGUMENT => {
@@ -51,7 +57,7 @@ fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             offset += 4;
         }
         REFERENCE => {
-            named_var!(names, buffer, str, next_var, func);
+            named_var!(names, buffer, str, next_var, func, globals);
             offset += 4
         }
         _ => err(format!("Invalid string identifier: {}", ident))
@@ -59,7 +65,7 @@ fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
     offset
 }
 
-fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str) -> u32 {
+fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str, globals: &[String]) -> u32 {
     let ident = token.chars().next().unwrap();
     match ident {
         LITERAL => {
@@ -71,7 +77,7 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
         VARIABLE | REFERENCE => {
             buffer.push_u8(ident as u8);
             let token = token.split_at(1).1;
-            named_var!(names, buffer, token, next_var, func);
+            named_var!(names, buffer, token, next_var, func, globals);
             5
         }
         ARGUMENT => {
@@ -100,7 +106,7 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
     }
 }
 
-fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str) -> u32 {
+fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str, globals: &[String]) -> u32 {
     let ident = token.chars().next().unwrap();
     match ident {
         LITERAL => {
@@ -110,7 +116,7 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
         VARIABLE | REFERENCE => {
             buffer.push_u8(ident as u8);
             let token = token.split_at(1).1;
-            named_var!(names, buffer, token, next_var, func);
+            named_var!(names, buffer, token, next_var, func, globals);
             5
         }
         ARGUMENT => {
@@ -139,7 +145,7 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
     }
 }
 
-fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str) -> u32 {
+fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str, globals: &[String]) -> u32 {
     let ident = token.chars().next().unwrap();
     match ident {
         LITERAL => {
@@ -149,7 +155,7 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
         VARIABLE | REFERENCE => {
             buffer.push_u8(ident as u8);
             let token = token.split_at(1).1;
-            named_var!(names, buffer, token, next_var, func);
+            named_var!(names, buffer, token, next_var, func, globals);
             5
         }
         ARGUMENT => {
@@ -176,7 +182,7 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
 }
 
 macro_rules! named {
-    ($names:ident, $buffer:ident, $tokens:ident, $next:ident, $func:ident) => {
+    ($names:ident, $buffer:ident, $tokens:ident, $next:ident, $func:ident, $globals:ident) => {
         {
             let mut offset = false;
             let mut token = $tokens.next().unwrap();
@@ -185,14 +191,20 @@ macro_rules! named {
                 token = token.split_at(1).1;
             }
             if unsafe { NAMED } {
-                let ident = format!("{}_{}", $func, token);
-                if $names.contains_key(&ident) {
-                    $buffer.push_u32(*$names.get(&ident).unwrap());
+                let index = $globals.binary_search(&token.to_string());
+                if let Ok(id) = index {
+                    $buffer.push_u32(id as u32)
                 }
                 else {
-                    $names.insert(ident, $next);
-                    $buffer.push_u32($next);
-                    $next += 1;
+                    let ident = format!("{}_{}", $func, token);
+                    if $names.contains_key(&ident) {
+                        $buffer.push_u32(*$names.get(&ident).unwrap());
+                    }
+                    else {
+                        $names.insert(ident, $next);
+                        $buffer.push_u32($next);
+                        $next += 1;
+                    }
                 }
             }
             else {
@@ -238,7 +250,9 @@ pub fn jump(token: &str, index: u32, labels: &mut HashMap<String, u32>, calls: &
 }
 
 pub fn assemble(input: String) -> Vec<u8> {
-    let input = remove_quotes(&input.trim());
+    let input = clean(&remove_quotes(&input.trim()));
+    let mut globals = extract_globals(&input);
+    globals.sort_unstable();
     let mut buffer = ByteBuffer::new();
     let mut tokens = input.split_whitespace();
     let mut index = 4;
@@ -248,7 +262,7 @@ pub fn assemble(input: String) -> Vec<u8> {
     let mut jumps = Vec::new();
     let mut calls = Vec::new();
     let mut names: HashMap<String, u32> = HashMap::new();
-    let mut next_var = 0;
+    let mut next_var = globals.len() as u32;
     let mut func = "".to_string();
     let mut idents: HashMap<String, u32> = HashMap::new();
     let mut functions: Vec<u32> = Vec::new();
@@ -262,8 +276,48 @@ pub fn assemble(input: String) -> Vec<u8> {
 
     buffer.push_u32(0);
 
+    macro_rules! push_val {
+        () => {
+            index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func, &globals);
+        };
+    }
+
+    macro_rules! push_num {
+        () => {
+            index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func, &globals);
+        };
+    }
+
+    macro_rules! push_prim {
+        () => {
+            index += push_prim_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func, &globals);
+        };
+    }
+
+    macro_rules! push_str {
+        () => {
+            index += push_str_var(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func, &globals);
+        };
+    }
+
+    macro_rules! get_named {
+        () => {
+            index += named!(names, buffer, tokens, next_var, func, globals);
+        }
+    }
+
+    macro_rules! jmp {
+        () => {
+            buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
+        };
+    }
+
     while let Some(s) = tokens.next() {
-        if s.starts_with("@") {
+        if s == ".global" {
+            tokens.next();
+            continue;
+        }
+        else if s.starts_with("@") {
             if !returned {
                 err("There was no return from previous function! This can lead to undefined behaviour!".to_string());
             }
@@ -311,61 +365,61 @@ pub fn assemble(input: String) -> Vec<u8> {
             }
             "MOV" => {
                 buffer.push_u8(MOV);
-                index += named!(names, buffer, tokens, next_var, func);
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_val!();
             }
             "JMP" => {
                 buffer.push_u8(JMP);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
+                jmp!();
                 index += 4;
             }
             "JZ" => {
                 buffer.push_u8(JZ);
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                push_val!();
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
+                jmp!();
                 index += 4;
             }
             "CMP" => {
                 buffer.push_u8(CMP);
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                push_val!();
+                push_val!();
             }
             "JE" => {
                 buffer.push_u8(JE);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
+                jmp!();
                 index += 4;
             }
             "JNE" => {
                 buffer.push_u8(JNE);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
+                jmp!();
                 index += 4;
             }
             "JG" => {
                 buffer.push_u8(JG);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
+                jmp!();
                 index += 4;
             }
             "JGE" => {
                 buffer.push_u8(JGE);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
+                jmp!();
                 index += 4;
             }
             "JL" => {
                 buffer.push_u8(JL);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
+                jmp!();
                 index += 4;
             }
             "JLE" => {
                 buffer.push_u8(JLE);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
+                jmp!();
                 index += 4;
             }
             "CALL" => {
@@ -392,104 +446,103 @@ pub fn assemble(input: String) -> Vec<u8> {
             }
             "INC" => {
                 buffer.push_u8(INC);
-                index += named!(names, buffer, tokens, next_var, func);
+                get_named!();
             }
             "DEC" => {
                 buffer.push_u8(DEC);
-                index += named!(names, buffer, tokens, next_var, func);
+                get_named!();
             }
             "ADD" => {
                 buffer.push_u8(ADD);
-                index += named!(names, buffer, tokens, next_var, func);
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_num!();
             }
             "SUB" => {
                 buffer.push_u8(SUB);
-                index += named!(names, buffer, tokens, next_var, func);
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_num!();
             }
             "MUL" => {
                 buffer.push_u8(MUL);
-                index += named!(names, buffer, tokens, next_var, func);
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_num!();
             }
             "DIV" => {
                 buffer.push_u8(DIV);
-                index += named!(names, buffer, tokens, next_var, func);
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_num!();
             }
             "MOD" => {
                 buffer.push_u8(MOD);
-                index += named!(names, buffer, tokens, next_var, func);
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_num!();
             }
             "AND" => {
                 buffer.push_u8(AND);
-                index += named!(names, buffer, tokens, next_var, func);
-                index += push_prim_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_prim!();
             }
             "OR" => {
                 buffer.push_u8(OR);
-                index += named!(names, buffer, tokens, next_var, func);
-                index += push_prim_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_prim!();
             }
             "NOT" => {
                 buffer.push_u8(NOT);
-                index += named!(names, buffer, tokens, next_var, func);
+                get_named!();
             }
             "NEG" => {
                 buffer.push_u8(NEG);
-                index += named!(names, buffer, tokens, next_var, func);
+                get_named!();
             }
             "XOR" => {
                 buffer.push_u8(XOR);
-                index += named!(names, buffer, tokens, next_var, func);
-                index += push_prim_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_prim!();
             }
             "SHL" => {
                 buffer.push_u8(SHL);
-                index += named!(names, buffer, tokens, next_var, func);
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_num!();
             }
             "SHR" => {
                 buffer.push_u8(SHR);
-                index += named!(names, buffer, tokens, next_var, func);
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_num!();
             }
             "SAR" => {
                 buffer.push_u8(SAR);
-                index += named!(names, buffer, tokens, next_var, func);
-                index += push_num_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_num!();
             }
             "PUSH" => {
                 buffer.push_u8(PUSH);
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                push_val!();
             }
             "POP" => {
                 buffer.push_u8(POP);
-                index += named!(names, buffer, tokens, next_var, func);
+                get_named!();
             }
             "PRINT" => {
                 buffer.push_u8(PRINT);
-                index += push_str_var(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                push_str!();
             }
             "SH" => {
                 buffer.push_u8(SH);
-                index += push_str_var(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                push_str!();
             }
             "PUSH_RET" => {
                 buffer.push_u8(PUSH_RET);
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                push_val!();
             }
             "POP_RET" => {
                 buffer.push_u8(POP_RET);
-                index += named!(names, buffer, tokens, next_var, func);
+                get_named!();
             }
             "CPY" => {
                 buffer.push_u8(CPY);
-                named!(names, buffer, tokens, next_var, func);
-                index += 4;
-                index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
+                get_named!();
+                push_val!();
             }
             _ => err(format!("Unknown instruction: {}", s)),
         }
@@ -523,6 +576,32 @@ pub fn assemble(input: String) -> Vec<u8> {
     }
 
     buffer.into_vec()
+}
+
+fn clean(s: &str) -> String {
+    s.lines().filter_map(|s| {
+        let s = s.trim();
+        if s.is_empty() || s.starts_with(";") {
+            None
+        }
+        else {
+            let mut s = s.split(';').next().unwrap().to_string();
+            s.push('\n');
+            Some(s)
+        }
+    }).collect()
+}
+
+fn extract_globals(s: &str) -> Vec<String> {
+    s.lines().filter_map(|s| {
+        let mut tokens = s.trim().split_whitespace();
+        if tokens.next().unwrap() == ".global" {
+            Some(tokens.next().unwrap().to_string())
+        }
+        else {
+            None
+        }
+    }).collect()
 }
 
 fn builtin(name: &str) -> u32 {
