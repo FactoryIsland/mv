@@ -2,11 +2,11 @@
 .main
     call message
     pop_ret message
-    push &message
+    push $message
     call git_add_all
     call git_commit
     call git_push_upstream
     ret
 .message
-    push_ret #"References!"
+    push_ret #"Example fibonacci program"
     ret

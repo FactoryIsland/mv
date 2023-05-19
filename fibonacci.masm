@@ -1,0 +1,16 @@
+.named
+.main
+    mov a 0
+    mov b 1
+
+    mov counter 0
+
+    cpy c $a
+    add c $b
+    mov a $b
+    mov b $c
+    print $a
+
+    inc counter
+    cmp $counter 91
+    jl 3
