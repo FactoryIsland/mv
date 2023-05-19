@@ -20,14 +20,6 @@
 - PRINT \<val>: Prints the \<val> to stdout
 - SH \<val>: Executes the shell command provided in \<val>
 
-# Might change later:
-- GIT_ADD_ALL: Runs 'git add *'
-- GIT_ADD \<val>: Runs 'git add \<val>'
-- GIT_COMMIT_DEFAULT: Runs 'git commit -m "Commit"'
-- GIT_COMMIT \<val>: Runs 'git commit -m "\<val>"'
-- GIT_PUSH_UPSTREAM: Runs 'git push'
-- GIT_PUSH \<val>: Runs 'git push -u \<val>'
-
 # Variable specification:
 - \<id>: just a number
 - \<val>:
