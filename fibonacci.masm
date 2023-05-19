@@ -1,10 +1,11 @@
 .named
-.main
+@main:
     mov a 0
     mov b 1
 
     mov counter 0
 
+.loop:
     cpy c $a
     add c $b
     mov a $b
@@ -13,4 +14,4 @@
 
     inc counter
     cmp $counter 91
-    jl 3
+    jl loop

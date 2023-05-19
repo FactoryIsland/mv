@@ -208,11 +208,42 @@ macro_rules! named {
     };
 }
 
+pub fn jump(token: &str, index: u32, labels: &mut HashMap<String, u32>, calls: &mut Vec<u32>) -> u32 {
+    if token.starts_with('-') {
+        let location = index - token.split_at(1).1.parse::<u32>().unwrap();
+        calls.push(location);
+        calls.len() as u32 - 1
+    }
+    else if token.starts_with('+') {
+        let location = index + token.split_at(1).1.parse::<u32>().unwrap();
+        calls.push(location);
+        calls.len() as u32 - 1
+    }
+    else if token.chars().next().unwrap().is_digit(10) {
+        let location = token.parse::<u32>().unwrap();
+        calls.push(location);
+        calls.len() as u32 - 1
+    }
+    else {
+        if labels.contains_key(token) {
+            *labels.get(token).unwrap()
+        }
+        else {
+            calls.push(0);
+            let id = calls.len() as u32 - 1;
+            labels.insert(token.to_string(), id);
+            id
+        }
+    }
+}
+
 pub fn assemble(input: String) -> Vec<u8> {
     let input = remove_quotes(&input.trim());
     let mut buffer = ByteBuffer::new();
     let mut tokens = input.split_whitespace();
     let mut index = 4;
+    let mut labels = HashMap::new();
+    let mut jump_calls = Vec::new();
     let mut addresses = Vec::new();
     let mut jumps = Vec::new();
     let mut calls = Vec::new();
@@ -232,11 +263,14 @@ pub fn assemble(input: String) -> Vec<u8> {
     buffer.push_u32(0);
 
     while let Some(s) = tokens.next() {
-        if s.starts_with(".") {
+        if s.starts_with("@") {
             if !returned {
                 err("There was no return from previous function! This can lead to undefined behaviour!".to_string());
             }
-            let ident = s.split_at(1).1;
+            let mut ident = s.split_at(1).1;
+            if ident.ends_with(':') {
+                ident = ident.split_at(ident.len() - 1).0;
+            }
             if !idents.contains_key(ident) {
                 idents.insert(ident.to_string(), next_fn);
                 next_fn += 1;
@@ -248,6 +282,20 @@ pub fn assemble(input: String) -> Vec<u8> {
             func = ident.to_string();
             functions[id as usize] = index;
             returned = false;
+            continue;
+        }
+        else if s.starts_with(".") {
+            let mut ident = s.split_at(1).1;
+            if ident.ends_with(':') {
+                ident = ident.split_at(ident.len() - 1).0;
+            }
+            if !labels.contains_key(ident) {
+                jump_calls.push(addresses.len() as u32);
+                labels.insert(ident.to_string(), jump_calls.len() as u32 - 1);
+            }
+            else {
+                jump_calls[labels[ident] as usize] = addresses.len() as u32;
+            }
             continue;
         }
         if func.is_empty() {
@@ -269,14 +317,15 @@ pub fn assemble(input: String) -> Vec<u8> {
             "JMP" => {
                 buffer.push_u8(JMP);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
+                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
                 index += 4;
             }
             "JZ" => {
                 buffer.push_u8(JZ);
                 index += push_val(&mut buffer, tokens.next().unwrap(), &mut names, &mut next_var, &func);
                 jumps.push(buffer.get_wpos());
-                index += named!(names, buffer, tokens, next_var, func);
+                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
+                index += 4;
             }
             "CMP" => {
                 buffer.push_u8(CMP);
@@ -286,37 +335,37 @@ pub fn assemble(input: String) -> Vec<u8> {
             "JE" => {
                 buffer.push_u8(JE);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
+                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
                 index += 4;
             }
             "JNE" => {
                 buffer.push_u8(JNE);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
+                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
                 index += 4;
             }
             "JG" => {
                 buffer.push_u8(JG);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
+                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
                 index += 4;
             }
             "JGE" => {
                 buffer.push_u8(JGE);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
+                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
                 index += 4;
             }
             "JL" => {
                 buffer.push_u8(JL);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
+                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
                 index += 4;
             }
             "JLE" => {
                 buffer.push_u8(JLE);
                 jumps.push(buffer.get_wpos());
-                buffer.push_u32(tokens.next().unwrap().parse::<u32>().unwrap());
+                buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
                 index += 4;
             }
             "CALL" => {
@@ -456,11 +505,11 @@ pub fn assemble(input: String) -> Vec<u8> {
     for jump in jumps {
         buffer.set_rpos(jump);
         let addr = buffer.pop_u32().unwrap() as usize;
-        if addr >= addresses.len() {
+        if addr >= jump_calls.len() {
             err(format!("Invalid jump address: {}", addr));
         }
         buffer.set_wpos(jump);
-        buffer.write_u32(addresses[addr as usize]);
+        buffer.write_u32(addresses[jump_calls[addr as usize] as usize]);
     }
 
     for call in calls {
