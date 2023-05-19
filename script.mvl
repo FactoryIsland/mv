@@ -1,1 +1,7 @@
-git(args[0])
+fn get_message() -> String {
+    return "MVScript bytecode and assembly finished";
+}
+
+fn main() -> {
+    git(null, get_message(), null);
+}

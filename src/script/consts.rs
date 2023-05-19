@@ -1,5 +1,3 @@
-use std::string::ToString;
-
 pub const NOOP: u8 = 0;
 pub const END: u8 = 1;
 pub const MOV: u8 = 2;

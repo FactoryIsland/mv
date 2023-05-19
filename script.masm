@@ -1,11 +1,12 @@
 .named
-.get_message
-push_ret #"MVScript bytecode and assembly finished"
-ret
 .main
-call get_message
-pop_ret message
-push $message
-call git_add_all
-call git_commit
-call git_push_upstream
+    call message
+    pop_ret message
+    push $message
+    call git_add_all
+    call git_commit
+    call git_push_upstream
+    ret
+.message
+    push_ret #"Fixed jump instruction"
+    ret

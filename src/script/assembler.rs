@@ -80,7 +80,7 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
                     buffer.push_u8(INTEGER as u8);
                     buffer.push_i64(token.parse::<i64>().unwrap());
                 }
-                5
+                9
             }
         }
     }
@@ -114,7 +114,7 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
                     buffer.push_u8(INTEGER as u8);
                     buffer.push_i64(token.parse::<i64>().unwrap());
                 }
-                5
+                9
             }
         }
     }
@@ -145,7 +145,7 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
                     buffer.push_u8(INTEGER as u8);
                     buffer.push_i64(token.parse::<i64>().unwrap());
                 }
-                5
+                9
             }
         }
     }
@@ -171,7 +171,7 @@ macro_rules! named {
 }
 
 pub fn assemble(input: String) -> Vec<u8> {
-    let input = remove_quotes(&input);
+    let input = remove_quotes(&input.trim());
     let mut buffer = ByteBuffer::new();
     let mut tokens = input.split_whitespace();
     let mut index = 4;
@@ -195,7 +195,7 @@ pub fn assemble(input: String) -> Vec<u8> {
     while let Some(s) = tokens.next() {
         if s.starts_with(".") {
             if !returned {
-                err("There was no return from previous function! This can cause memory errors!".to_string());
+                err("There was no return from previous function! This can lead to undefined behaviour!".to_string());
             }
             let ident = s.split_at(1).1;
             if !idents.contains_key(ident) {
