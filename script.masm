@@ -8,6 +8,5 @@
     call git_push_upstream
     ret
 .message
-    mov message 10
     push_ret #"References!"
     ret
