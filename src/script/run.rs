@@ -11,58 +11,62 @@ fn err(str: String) {
 
 fn get_str_any(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> String {
     let ident = buffer.pop_u8().unwrap() as char;
-    if ident == LITERAL {
-        buffer.pop_string().unwrap()
-    }
-    else if ident == VARIABLE {
-        let index = buffer.pop_u32().unwrap();
-        if index >= variables.len() as u32 {
-            err(format!("Argument id {} out of range!", index));
+    match ident {
+        LITERAL => {
+            buffer.pop_string().unwrap()
         }
-        variables[index as usize].to_string()
-    }
-    else if ident == ARGUMENT {
-        let id = buffer.pop_u32().unwrap();
-        if id >= args.len() as u32 {
-            err(format!("Argument id {} out of range!", id));
+        VARIABLE | REFERENCE => {
+            let index = buffer.pop_u32().unwrap();
+            if index >= variables.len() as u32 {
+                err(format!("Argument id {} out of range!", index));
+            }
+            variables[index as usize].to_string()
         }
-        args[id as usize].clone()
-    }
-    else {
-        err(format!("Unknown string identifier: {}!", ident as u8));
-        String::new()
+        ARGUMENT => {
+            let id = buffer.pop_u32().unwrap();
+            if id >= args.len() as u32 {
+                err(format!("Argument id {} out of range!", id));
+            }
+            args[id as usize].clone()
+        }
+        _ => {
+            err(format!("Unknown string identifier: {}!", ident as u8));
+            String::new()
+        }
     }
 }
 
 fn get_str(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> String {
     let ident = buffer.pop_u8().unwrap() as char;
-    if ident == LITERAL {
-        buffer.pop_string().unwrap()
-    }
-    else if ident == VARIABLE {
-        let index = buffer.pop_u32().unwrap();
-        if index >= variables.len() as u32 {
-            err(format!("Variable id {} out of range!", index));
+    match ident {
+        LITERAL => {
+            buffer.pop_string().unwrap()
         }
-        let var = &variables[index as usize];
-        if let Variable::String(s) = var {
-            s.clone()
+        VARIABLE | REFERENCE => {
+            let index = buffer.pop_u32().unwrap();
+            if index >= variables.len() as u32 {
+                err(format!("Variable id {} out of range!", index));
+            }
+            let var = &variables[index as usize];
+            if let Variable::String(s) = var {
+                s.clone()
+            }
+            else {
+                err(format!("Variable must be a string"));
+                String::new()
+            }
         }
-        else {
-            err(format!("Variable must be a string"));
+        ARGUMENT => {
+            let id = buffer.pop_u32().unwrap();
+            if id >= args.len() as u32 {
+                err(format!("Argument id {} out of range!", id));
+            }
+            args[id as usize].clone()
+        }
+        _ => {
+            err(format!("Unknown string identifier: {}!", ident as u8));
             String::new()
         }
-    }
-    else if ident == ARGUMENT {
-        let id = buffer.pop_u32().unwrap();
-        if id >= args.len() as u32 {
-            err(format!("Argument id {} out of range!", id));
-        }
-        args[id as usize].clone()
-    }
-    else {
-        err(format!("Unknown string identifier: {}!", ident as u8));
-        String::new()
     }
 }
 

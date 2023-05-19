@@ -51,9 +51,8 @@ fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             offset += 4;
         }
         REFERENCE => {
-            buffer.push_u8(REFERENCE as u8);
             named_var!(names, buffer, str, next_var, func);
-            offset += 5
+            offset += 4
         }
         _ => err(format!("Invalid string identifier: {}", ident))
     }

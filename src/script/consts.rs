@@ -41,7 +41,7 @@ pub const BUILTIN_FUNCTIONS: [&str; 6] = [
     "GIT_COMMIT_DEFAULT",
     "GIT_COMMIT",
     "GIT_PUSH_UPSTREAM",
-    "GIT_PUSH",
+    "GIT_PUSH"
 ];
 
 pub const BUILTIN: char = '@';
