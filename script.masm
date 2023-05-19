@@ -2,12 +2,12 @@
 .main
     call message
     pop_ret message
-    push $message
+    push &message
     call git_add_all
     call git_commit
     call git_push_upstream
     ret
 .message
     mov message 10
-    push_ret #"Shorter builtin function calls in bytecode"
+    push_ret #"References!"
     ret

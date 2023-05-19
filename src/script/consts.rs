@@ -48,6 +48,7 @@ pub const BUILTIN: char = '@';
 pub const LITERAL: char = '#';
 pub const ARGUMENT: char = '%';
 pub const VARIABLE: char = '$';
+pub const REFERENCE: char = '&';
 pub const INTEGER: char = 'i';
 pub const FLOAT: char = 'f';
 pub const BOOLEAN_TRUE: char = 1 as char;

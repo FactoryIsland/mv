@@ -82,6 +82,13 @@ fn parse_variable(buffer: &mut ByteBuffer, variables: &mut [Variable], args: &[S
                 variables[index as usize].clone()
             }
         }
+        REFERENCE => {
+            let index = buffer.pop_u32().unwrap();
+            if index >= variables.len() as u32 {
+                err(format!("Variable id {} out of range!", index));
+            }
+            Variable::Reference(&mut variables[index as usize] as *mut Variable)
+        }
         ARGUMENT => {
             let id = buffer.pop_u32().unwrap();
             if id >= args.len() as u32 {
@@ -344,6 +351,7 @@ enum Variable {
     Int(i64),
     Float(f64),
     Bool(bool),
+    Reference(*mut Variable),
     #[default]
     Null
 }
@@ -359,6 +367,7 @@ impl Variable {
             Variable::Int(i) => *i == 0,
             Variable::Float(f) => *f == 0.0,
             Variable::Bool(b) => !*b,
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().is_zero() }
             Variable::Null => true
         }
     }
@@ -369,6 +378,9 @@ impl Variable {
                 err("Null variable!".to_string());
                 &Variable::Null
             }
+            Variable::Reference(ptr) => unsafe {
+                ptr.clone().as_ref().unwrap().not_null()
+            }
             _ => self
         }
     }
@@ -377,6 +389,7 @@ impl Variable {
         match self {
             Variable::String(s) => s.clone(),
             Variable::Null => "null".to_string(),
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().string() }
             _ => {
                 err("Variable is not a string!".to_string());
                 String::new()
@@ -388,6 +401,7 @@ impl Variable {
         match self {
             Variable::Int(i) => *i,
             Variable::Null => 0,
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().int() }
             _ => {
                 err("Variable is not an integer!".to_string());
                 0
@@ -399,6 +413,7 @@ impl Variable {
         match self {
             Variable::Float(f) => *f,
             Variable::Null => 0.0,
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().float() },
             _ => {
                 err("Variable is not a float!".to_string());
                 0.0
@@ -410,6 +425,7 @@ impl Variable {
         match self {
             Variable::Bool(b) => *b,
             Variable::Null => false,
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().bool() }
             _ => {
                 err("Variable is not a boolean!".to_string());
                 false
@@ -429,6 +445,9 @@ impl Variable {
                     }
                 }
                 Variable::Null => Cmp::NotEqual,
+                Variable::Reference(ptr) => {
+                    self.compare(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => {
                     err("Cannot compare string with other types!".to_string());
                     Cmp::Empty
@@ -448,6 +467,9 @@ impl Variable {
                 }
                 Variable::Float(b) => cmp_float(*a as f64, *b),
                 Variable::Null => Cmp::NotEqual,
+                Variable::Reference(ptr) => {
+                    self.compare(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => {
                     err("Cannot compare string with non number types!".to_string());
                     Cmp::Empty
@@ -457,6 +479,9 @@ impl Variable {
                 Variable::Float(b) => cmp_float(*a, *b),
                 Variable::Int(b) => cmp_float(*a, *b as f64),
                 Variable::Null => Cmp::NotEqual,
+                Variable::Reference(ptr) => {
+                    self.compare(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => {
                     err("Cannot compare string with non number types!".to_string());
                     Cmp::Empty
@@ -472,14 +497,21 @@ impl Variable {
                     }
                 }
                 Variable::Null => Cmp::NotEqual,
+                Variable::Reference(ptr) => {
+                    self.compare(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => Cmp::NotEqual
             }
             Variable::Null => {
                 match other {
                     Variable::Null => Cmp::Equal,
+                    Variable::Reference(ptr) => {
+                        self.compare(unsafe { ptr.clone().as_ref().unwrap() })
+                    }
                     _ => Cmp::NotEqual
                 }
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().compare(other) }
         }
     }
 
@@ -491,6 +523,7 @@ impl Variable {
             Variable::Float(f) => {
                 *f += 1.0;
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().inc() }
             _ => err("Cannot increment non number types!".to_string())
         }
     }
@@ -503,6 +536,7 @@ impl Variable {
             Variable::Float(f) => {
                 *f -= 1.0;
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().dec() }
             _ => err("Cannot decrement non number types!".to_string())
         }
     }
@@ -516,6 +550,9 @@ impl Variable {
                 Variable::Float(b) => {
                     *a += *b as i64;
                 }
+                Variable::Reference(ptr) => {
+                    self.add(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot add non number types!".to_string())
             }
             Variable::Float(a) => match other {
@@ -525,8 +562,12 @@ impl Variable {
                 Variable::Float(b) => {
                     *a += *b;
                 }
+                Variable::Reference(ptr) => {
+                    self.add(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot add non number types!".to_string())
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().add(other) }
             _ => err("Cannot add non number types!".to_string())
         }
     }
@@ -540,6 +581,9 @@ impl Variable {
                 Variable::Float(b) => {
                     *a -= *b as i64;
                 }
+                Variable::Reference(ptr) => {
+                    self.sub(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot subtract non number types!".to_string())
             }
             Variable::Float(a) => match other {
@@ -549,8 +593,12 @@ impl Variable {
                 Variable::Float(b) => {
                     *a -= *b;
                 }
+                Variable::Reference(ptr) => {
+                    self.sub(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot subtract non number types!".to_string())
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().sub(other) }
             _ => err("Cannot subtract non number types!".to_string())
         }
     }
@@ -564,6 +612,9 @@ impl Variable {
                 Variable::Float(b) => {
                     *a *= *b as i64;
                 }
+                Variable::Reference(ptr) => {
+                    self.mul(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot multiply non number types!".to_string())
             }
             Variable::Float(a) => match other {
@@ -573,8 +624,12 @@ impl Variable {
                 Variable::Float(b) => {
                     *a *= *b;
                 }
+                Variable::Reference(ptr) => {
+                    self.mul(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot multiply non number types!".to_string())
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().mul(other) }
             _ => err("Cannot multiply non number types!".to_string())
         }
     }
@@ -588,6 +643,9 @@ impl Variable {
                 Variable::Float(b) => {
                     *a /= *b as i64;
                 }
+                Variable::Reference(ptr) => {
+                    self.div(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot divide non number types!".to_string())
             }
             Variable::Float(a) => match other {
@@ -597,8 +655,12 @@ impl Variable {
                 Variable::Float(b) => {
                     *a /= *b;
                 }
+                Variable::Reference(ptr) => {
+                    self.div(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot divide non number types!".to_string())
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().div(other) }
             _ => err("Cannot divide non number types!".to_string())
         }
     }
@@ -612,6 +674,9 @@ impl Variable {
                 Variable::Float(b) => {
                     *a %= *b as i64;
                 }
+                Variable::Reference(ptr) => {
+                    self.rem(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot modulo non number types!".to_string())
             }
             Variable::Float(a) => match other {
@@ -621,8 +686,12 @@ impl Variable {
                 Variable::Float(b) => {
                     *a %= *b;
                 }
+                Variable::Reference(ptr) => {
+                    self.rem(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot modulo non number types!".to_string())
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().rem(other) }
             _ => err("Cannot modulo non number types!".to_string())
         }
     }
@@ -636,14 +705,21 @@ impl Variable {
                 Variable::Float(b) => {
                     *a &= *b as i64;
                 }
+                Variable::Reference(ptr) => {
+                    self.and(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot and non number types!".to_string())
             }
             Variable::Bool(a) => match other {
                 Variable::Bool(b) => {
                     *a &= *b;
                 }
+                Variable::Reference(ptr) => {
+                    self.and(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot and non boolean types!".to_string())
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().and(other) }
             _ => err("Cannot and non boolean or non numeric types!".to_string())
         }
     }
@@ -657,14 +733,21 @@ impl Variable {
                 Variable::Float(b) => {
                     *a |= *b as i64;
                 }
+                Variable::Reference(ptr) => {
+                    self.or(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot or non number types!".to_string())
             }
             Variable::Bool(a) => match other {
                 Variable::Bool(b) => {
                     *a |= *b;
                 }
+                Variable::Reference(ptr) => {
+                    self.or(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot or non boolean types!".to_string())
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().or(other) }
             _ => err("Cannot or non boolean or non numeric types!".to_string())
         }
     }
@@ -678,14 +761,21 @@ impl Variable {
                 Variable::Float(b) => {
                     *a ^= *b as i64;
                 }
+                Variable::Reference(ptr) => {
+                    self.xor(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot xor non number types!".to_string())
             }
             Variable::Bool(a) => match other {
                 Variable::Bool(b) => {
                     *a ^= *b;
                 }
+                Variable::Reference(ptr) => {
+                    self.xor(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot xor non boolean types!".to_string())
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().xor(other) }
             _ => err("Cannot xor non boolean or non numeric types!".to_string())
         }
     }
@@ -698,6 +788,7 @@ impl Variable {
             Variable::Bool(a) => {
                 *a = !*a;
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().not() }
             _ => err("Cannot not non boolean or non numeric types!".to_string())
         }
     }
@@ -710,7 +801,8 @@ impl Variable {
             Variable::Float(a) => {
                 *a = -*a;
             }
-            _ => err("Cannot not non boolean or non numeric types!".to_string())
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().neg() }
+            _ => err("Cannot neg non numeric types!".to_string())
         }
     }
 
@@ -723,8 +815,12 @@ impl Variable {
                 Variable::Float(b) => {
                     *a <<= *b as i64;
                 }
+                Variable::Reference(ptr) => {
+                    self.shl(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot shl non number types!".to_string())
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().shl(other) }
             _ => err("Cannot shl non number types!".to_string())
         }
     }
@@ -738,8 +834,12 @@ impl Variable {
                 Variable::Float(b) => {
                     *a = ((*a as u64) >> *b as i64) as i64;
                 }
+                Variable::Reference(ptr) => {
+                    self.shr(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot shr non number types!".to_string())
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().shr(other) }
             _ => err("Cannot shr non number types!".to_string())
         }
     }
@@ -753,8 +853,12 @@ impl Variable {
                 Variable::Float(b) => {
                     *a >>= *b as i64;
                 }
+                Variable::Reference(ptr) => {
+                    self.sar(unsafe { ptr.clone().as_ref().unwrap() })
+                }
                 _ => err("Cannot sar non number types!".to_string())
             }
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().sar(other) }
             _ => err("Cannot sar non number types!".to_string())
         }
     }
@@ -782,6 +886,7 @@ impl ToString for Variable {
             Variable::Int(i) => format!("{}", i),
             Variable::Float(f) => format!("{}", f),
             Variable::Bool(b) => format!("{}", b),
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().to_string() }
             Variable::Null => "null".to_string()
         }
     }
