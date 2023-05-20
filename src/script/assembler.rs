@@ -48,17 +48,13 @@ fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             buffer.push_string(&str);
             offset += str.len() as u32 + 4;
         }
-        VARIABLE => {
+        VARIABLE | REFERENCE | DEREF => {
             named_var!(names, buffer, str, next_var, func, globals);
             offset += 4;
         }
         ARGUMENT => {
             buffer.push_u32(token.parse::<u32>().unwrap());
             offset += 4;
-        }
-        REFERENCE => {
-            named_var!(names, buffer, str, next_var, func, globals);
-            offset += 4
         }
         _ => err(format!("Invalid string identifier: {}", ident))
     }
@@ -74,7 +70,7 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
             buffer.push_string(&str);
             str.len() as u32 + 5
         }
-        VARIABLE | REFERENCE => {
+        VARIABLE | REFERENCE | DEREF => {
             buffer.push_u8(ident as u8);
             let token = token.split_at(1).1;
             named_var!(names, buffer, token, next_var, func, globals);
@@ -82,21 +78,35 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
         }
         ARGUMENT => {
             buffer.push_u8(ARGUMENT as u8);
-            buffer.push_u32(token.parse::<u32>().unwrap());
+            buffer.push_u32(token.split_at(1).1.parse::<u32>().unwrap());
+            5
+        }
+        '\'' => {
+            let c = parse_char(&token.replace('\'', ""));
+            buffer.push_u8(CHAR as u8);
+            buffer.push_u32(c as u32);
             5
         }
         _ => {
             if token == "true" {
                 buffer.push_u8(BOOLEAN_TRUE as u8);
                 1
-            } else if token == "false" {
+            }
+            else if token == "false" {
                 buffer.push_u8(BOOLEAN_FALSE as u8);
                 1
-            } else {
+            }
+            else if token.ends_with(CHAR) {
+                buffer.push_u8(CHAR as u8);
+                buffer.push_u32(token.split_at(token.len() - 1).0.parse::<u32>().unwrap());
+                5
+            }
+            else {
                 if token.contains('.') {
                     buffer.push_u8(FLOAT as u8);
                     buffer.push_f64(token.parse::<f64>().unwrap());
-                } else {
+                }
+                else {
                     buffer.push_u8(INTEGER as u8);
                     buffer.push_i64(token.parse::<i64>().unwrap());
                 }
@@ -113,7 +123,7 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
             err("Argument cannot be of type string!".to_string());
             0
         }
-        VARIABLE | REFERENCE => {
+        VARIABLE | REFERENCE | DEREF => {
             buffer.push_u8(ident as u8);
             let token = token.split_at(1).1;
             named_var!(names, buffer, token, next_var, func, globals);
@@ -121,21 +131,35 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
         }
         ARGUMENT => {
             buffer.push_u8(ARGUMENT as u8);
-            buffer.push_u32(token.parse::<u32>().unwrap());
+            buffer.push_u32(token.split_at(1).1.parse::<u32>().unwrap());
+            5
+        }
+        '\'' => {
+            let c = parse_char(&token.replace('\'', ""));
+            buffer.push_u8(CHAR as u8);
+            buffer.push_u32(c as u32);
             5
         }
         _ => {
             if token == "true" {
                 buffer.push_u8(BOOLEAN_TRUE as u8);
                 1
-            } else if token == "false" {
+            }
+            else if token == "false" {
                 buffer.push_u8(BOOLEAN_FALSE as u8);
                 1
-            } else {
+            }
+            else if token.ends_with(CHAR) {
+                buffer.push_u8(CHAR as u8);
+                buffer.push_u32(token.split_at(token.len() - 1).0.parse::<u32>().unwrap());
+                5
+            }
+            else {
                 if token.contains('.') {
                     buffer.push_u8(FLOAT as u8);
                     buffer.push_f64(token.parse::<f64>().unwrap());
-                } else {
+                }
+                else {
                     buffer.push_u8(INTEGER as u8);
                     buffer.push_i64(token.parse::<i64>().unwrap());
                 }
@@ -152,7 +176,7 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             err("Argument cannot be of type string!".to_string());
             0
         }
-        VARIABLE | REFERENCE => {
+        VARIABLE | REFERENCE | DEREF => {
             buffer.push_u8(ident as u8);
             let token = token.split_at(1).1;
             named_var!(names, buffer, token, next_var, func, globals);
@@ -160,18 +184,31 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
         }
         ARGUMENT => {
             buffer.push_u8(ARGUMENT as u8);
-            buffer.push_u32(token.parse::<u32>().unwrap());
+            buffer.push_u32(token.split_at(1).1.parse::<u32>().unwrap());
+            5
+        }
+        '\'' => {
+            let c = parse_char(&token.replace('\'', ""));
+            buffer.push_u8(CHAR as u8);
+            buffer.push_u32(c as u32);
             5
         }
         _ => {
             if token == "true" || token == "false" {
                 err("Argument cannot be of type boolean!".to_string());
                 0
-            } else {
+            }
+            else if token.ends_with(CHAR) {
+                buffer.push_u8(CHAR as u8);
+                buffer.push_u32(token.split_at(token.len() - 1).0.parse::<u32>().unwrap());
+                5
+            }
+            else {
                 if token.contains('.') {
                     buffer.push_u8(FLOAT as u8);
                     buffer.push_f64(token.parse::<f64>().unwrap());
-                } else {
+                }
+                else {
                     buffer.push_u8(INTEGER as u8);
                     buffer.push_i64(token.parse::<i64>().unwrap());
                 }
@@ -186,8 +223,12 @@ macro_rules! named {
         {
             let mut offset = false;
             let mut token = $tokens.next().unwrap();
-            if token.starts_with('$') {
+            if token.starts_with(VARIABLE) {
+                token = token.split_at(1).1;
+            }
+            if token.starts_with(DEREF) {
                 offset = true;
+                $buffer.push_u8(DEREF as u8);
                 token = token.split_at(1).1;
             }
             if unsafe { NAMED } {
@@ -255,7 +296,7 @@ pub fn assemble(input: String) -> Vec<u8> {
     globals.sort_unstable();
     let mut buffer = ByteBuffer::new();
     let mut tokens = input.split_whitespace();
-    let mut index = 4;
+    let mut index = 8;
     let mut labels = HashMap::new();
     let mut jump_calls = Vec::new();
     let mut addresses = Vec::new();
@@ -268,12 +309,14 @@ pub fn assemble(input: String) -> Vec<u8> {
     let mut functions: Vec<u32> = Vec::new();
     let mut next_fn = 0;
     let mut returned = true;
+    let mut table = false;
 
     if input.starts_with(".named") {
         unsafe { NAMED = true; }
         tokens.next();
     }
 
+    buffer.push_u32(0);
     buffer.push_u32(0);
 
     macro_rules! push_val {
@@ -308,7 +351,38 @@ pub fn assemble(input: String) -> Vec<u8> {
 
     macro_rules! jmp {
         () => {
-            buffer.push_u32(jump(tokens.next().unwrap(), addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
+            let token = tokens.next().unwrap();
+            if token.starts_with(VARIABLE) {
+                table = true;
+                let token = token.split_at(1).1;
+                buffer.push_u8(VARIABLE as u8);
+                if unsafe { NAMED } {
+                    let index = globals.binary_search(&token.to_string());
+                    if let Ok(id) = index {
+                        buffer.push_u32(id as u32)
+                    }
+                    else {
+                        let ident = format!("{}_{}", func, token);
+                        if names.contains_key(&ident) {
+                            buffer.push_u32(*names.get(&ident).unwrap());
+                        }
+                        else {
+                            names.insert(ident, next_var);
+                            buffer.push_u32(next_var);
+                            next_var += 1;
+                        }
+                    }
+                }
+                else {
+                    buffer.push_u32(token.parse::<u32>().unwrap());
+                }
+                index += 5;
+            }
+            else {
+                jumps.push(buffer.get_wpos());
+                buffer.push_u32(jump(token, addresses.len() as u32 - 1, &mut labels, &mut jump_calls));
+                index += 4;
+            }
         };
     }
 
@@ -370,16 +444,27 @@ pub fn assemble(input: String) -> Vec<u8> {
             }
             "JMP" => {
                 buffer.push_u8(JMP);
-                jumps.push(buffer.get_wpos());
                 jmp!();
-                index += 4;
             }
             "JZ" => {
                 buffer.push_u8(JZ);
                 push_val!();
-                jumps.push(buffer.get_wpos());
                 jmp!();
-                index += 4;
+            }
+            "JNZ" => {
+                buffer.push_u8(JNZ);
+                push_val!();
+                jmp!();
+            }
+            "JN" => {
+                buffer.push_u8(JN);
+                push_val!();
+                jmp!();
+            }
+            "JNN" => {
+                buffer.push_u8(JNN);
+                push_val!();
+                jmp!();
             }
             "CMP" => {
                 buffer.push_u8(CMP);
@@ -388,39 +473,27 @@ pub fn assemble(input: String) -> Vec<u8> {
             }
             "JE" => {
                 buffer.push_u8(JE);
-                jumps.push(buffer.get_wpos());
                 jmp!();
-                index += 4;
             }
             "JNE" => {
                 buffer.push_u8(JNE);
-                jumps.push(buffer.get_wpos());
                 jmp!();
-                index += 4;
             }
             "JG" => {
                 buffer.push_u8(JG);
-                jumps.push(buffer.get_wpos());
                 jmp!();
-                index += 4;
             }
             "JGE" => {
                 buffer.push_u8(JGE);
-                jumps.push(buffer.get_wpos());
                 jmp!();
-                index += 4;
             }
             "JL" => {
                 buffer.push_u8(JL);
-                jumps.push(buffer.get_wpos());
                 jmp!();
-                index += 4;
             }
             "JLE" => {
                 buffer.push_u8(JLE);
-                jumps.push(buffer.get_wpos());
                 jmp!();
-                index += 4;
             }
             "CALL" => {
                 buffer.push_u8(CALL);
@@ -554,6 +627,13 @@ pub fn assemble(input: String) -> Vec<u8> {
 
     buffer.set_wpos(0);
     buffer.push_u32(functions[idents["main"] as usize]);
+    buffer.push_u32(buffer.len() as u32);
+    if table {
+        buffer.set_wpos(buffer.len());
+        for addr in addresses.iter() {
+            buffer.push_u32(*addr);
+        }
+    }
 
     for jump in jumps {
         buffer.set_rpos(jump);
@@ -602,6 +682,37 @@ fn extract_globals(s: &str) -> Vec<String> {
             None
         }
     }).collect()
+}
+
+fn parse_char(s: &str) -> char {
+    if s.len() == 1 {
+        s.chars().next().unwrap()
+    }
+    else if s.len() == 2 && s.chars().next().unwrap() == '\\' {
+        let c = s.chars().nth(1).unwrap();
+        match c {
+            's' => ' ',
+            'n' => '\n',
+            'r' => '\r',
+            't' => '\t',
+            'b' => '\x08',
+            'f' => '\x0c',
+            'v' => '\x0b',
+            _ => c
+        }
+    }
+    else if s.starts_with("\\x") || s.starts_with("\\u") {
+        let c = u32::from_str_radix(&s[2..], 16).unwrap();
+        let c = char::from_u32(c);
+        if let None = c {
+            err(format!("Invalid hex character: {}", s));
+        }
+        c.unwrap()
+    }
+    else {
+        err(format!("Invalid string literal for character: {}", s));
+        '\0'
+    }
 }
 
 fn builtin(name: &str) -> u32 {

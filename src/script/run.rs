@@ -23,6 +23,14 @@ fn get_str_any(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable])
             }
             variables[index as usize].to_string()
         }
+        DEREF => {
+            let index = buffer.pop_u32().unwrap();
+            if index >= variables.len() as u32 {
+                err(format!("Variable id {} out of range!", index));
+            }
+            let reference = &variables[index as usize];
+            reference.dereference().to_string()
+        }
         ARGUMENT => {
             let id = buffer.pop_u32().unwrap();
             if id >= args.len() as u32 {
@@ -48,14 +56,15 @@ fn get_str(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> 
             if index >= variables.len() as u32 {
                 err(format!("Variable id {} out of range!", index));
             }
-            let var = &variables[index as usize];
-            if let Variable::String(s) = var {
-                s.clone()
+            variables[index as usize].not_null().string()
+        }
+        DEREF => {
+            let index = buffer.pop_u32().unwrap();
+            if index >= variables.len() as u32 {
+                err(format!("Variable id {} out of range!", index));
             }
-            else {
-                err(format!("Variable must be a string"));
-                String::new()
-            }
+            let reference = &variables[index as usize];
+            reference.dereference().not_null().string()
         }
         ARGUMENT => {
             let id = buffer.pop_u32().unwrap();
@@ -94,6 +103,26 @@ fn parse_variable(buffer: &mut ByteBuffer, variables: &mut [Variable], args: &[S
             }
             Variable::Reference(&mut variables[index as usize] as *mut Variable)
         }
+        DEREF => {
+            let pos = buffer.get_rpos();
+            let ident = buffer.pop_u8().unwrap() as char;
+            if ident == REFERENCE {
+                let index = buffer.pop_u32().unwrap();
+                if index >= variables.len() as u32 {
+                    err(format!("Variable id {} out of range!", index));
+                }
+                variables[index as usize].clone()
+            }
+            else {
+                buffer.set_rpos(pos);
+                let index = buffer.pop_u32().unwrap();
+                if index >= variables.len() as u32 {
+                    err(format!("Variable id {} out of range!", index));
+                }
+                let reference = &variables[index as usize];
+                reference.dereference()
+            }
+        }
         ARGUMENT => {
             let id = buffer.pop_u32().unwrap();
             if id >= args.len() as u32 {
@@ -109,6 +138,10 @@ fn parse_variable(buffer: &mut ByteBuffer, variables: &mut [Variable], args: &[S
             let value = buffer.pop_f64().unwrap();
             Variable::Float(value)
         }
+        CHAR => {
+            let value = buffer.pop_u32().unwrap();
+            Variable::Char(value)
+        }
         BOOLEAN_TRUE => {
             Variable::Bool(true)
         }
@@ -122,11 +155,40 @@ fn parse_variable(buffer: &mut ByteBuffer, variables: &mut [Variable], args: &[S
     }
 }
 
-fn get_variable(id: u32, variables: &mut [Variable]) -> &mut Variable {
-    if id >= variables.len() as u32 {
-        err(format!("Variable id {} out of range!", id));
+fn get_variable<'a>(buffer: &mut ByteBuffer, variables: &'a mut [Variable]) -> &'a mut Variable {
+    let pos = buffer.get_rpos();
+    let ident = buffer.pop_u8().unwrap() as char;
+    if ident == DEREF {
+        let id = buffer.pop_u32().unwrap();
+        if id >= variables.len() as u32 {
+            err(format!("Variable id {} out of range!", id));
+        }
+        variables[id as usize].dereference_ptr()
     }
-    &mut variables[id as usize]
+    else {
+        buffer.set_rpos(pos);
+        let id = buffer.pop_u32().unwrap();
+        if id >= variables.len() as u32 {
+            err(format!("Variable id {} out of range!", id));
+        }
+        &mut variables[id as usize]
+    }
+}
+
+fn get_jmp(buffer: &mut ByteBuffer, variables: &[Variable], addr_table: &[usize]) -> usize {
+    let pos = buffer.get_rpos();
+    let ident = buffer.pop_u8().unwrap() as char;
+    if ident == VARIABLE {
+        let id = buffer.pop_u32().unwrap();
+        if id >= variables.len() as u32 {
+            err(format!("Variable id {} out of range!", id));
+        }
+        addr_table[variables[id as usize].as_addr()]
+    }
+    else {
+        buffer.set_rpos(pos);
+        buffer.pop_u32().unwrap() as usize
+    }
 }
 
 pub fn run(code: &[u8], args: Vec<String>) {
@@ -134,12 +196,20 @@ pub fn run(code: &[u8], args: Vec<String>) {
     let mut variables: Vec<Variable> = Vec::new();
     let mut call_stack: Vec<usize> = Vec::new();
     let mut arg_stack: Vec<Variable> = Vec::new();
+    let mut addr_table: Vec<usize> = Vec::new();
     let mut cmp = Cmp::Empty;
     let mut ret = Variable::Null;
 
     let main = buffer.pop_u32().unwrap();
     if main >= buffer.len() as u32 {
         err(format!("Main function id {} out of range!", main));
+    }
+
+    let mut addr = buffer.pop_u32().unwrap();
+    buffer.set_rpos(addr as usize);
+    loop {
+        addr = if let Some(v) = buffer.pop_u32() { v } else { break; };
+        addr_table.push(addr as usize);
     }
 
     buffer.set_rpos(main as usize);
@@ -150,23 +220,61 @@ pub fn run(code: &[u8], args: Vec<String>) {
         let codec = codec.unwrap();
         match codec {
             NOOP => {}
-            END => break,
+            END => {
+                let value = ret.int_or(0);
+                println!("Program exited with code {}", value);
+                break;
+            },
             MOV => {
-                let id = buffer.pop_u32().unwrap() as usize;
-                if variables.len() <= id {
-                    variables.resize(id + 1, Variable::Null);
+                let pos = buffer.get_rpos();
+                let ident = buffer.pop_u8().unwrap() as char;
+                if ident == DEREF {
+                    let id = buffer.pop_u32().unwrap() as usize;
+                    if variables.len() <= id {
+                        err("Setting a pointer variable must require the variable to already exist!".to_string());
+                    }
+                    let variable = parse_variable(&mut buffer, &mut variables, &args, true);
+                    variables[id].set_reference(variable);
                 }
-                let variable = parse_variable(&mut buffer, &mut variables, &args, true);
-                variables[id] = variable;
+                else {
+                    buffer.set_rpos(pos);
+                    let id = buffer.pop_u32().unwrap() as usize;
+                    if variables.len() <= id {
+                        variables.resize(id + 1, Variable::Null);
+                    }
+                    let variable = parse_variable(&mut buffer, &mut variables, &args, true);
+                    variables[id] = variable;
+                }
             }
             JMP => {
-                let addr = buffer.pop_u32().unwrap() as usize;
+                let addr = get_jmp(&mut buffer, &variables, &addr_table);
                 buffer.set_rpos(addr);
             }
             JZ => {
                 let value = parse_variable(&mut buffer, &mut variables, &args, false);
-                let addr = buffer.pop_u32().unwrap() as usize;
+                let addr = get_jmp(&mut buffer, &variables, &addr_table);
                 if value.is_zero() {
+                    buffer.set_rpos(addr);
+                }
+            }
+            JNZ => {
+                let value = parse_variable(&mut buffer, &mut variables, &args, false);
+                let addr = get_jmp(&mut buffer, &variables, &addr_table);
+                if !value.is_zero() {
+                    buffer.set_rpos(addr);
+                }
+            }
+            JN => {
+                let value = parse_variable(&mut buffer, &mut variables, &args, false);
+                let addr = get_jmp(&mut buffer, &variables, &addr_table);
+                if value.is_null() {
+                    buffer.set_rpos(addr);
+                }
+            }
+            JNN => {
+                let value = parse_variable(&mut buffer, &mut variables, &args, false);
+                let addr = get_jmp(&mut buffer, &variables, &addr_table);
+                if !value.is_null() {
                     buffer.set_rpos(addr);
                 }
             }
@@ -176,37 +284,37 @@ pub fn run(code: &[u8], args: Vec<String>) {
                 cmp = a.compare(&b);
             }
             JE => {
-                let addr = buffer.pop_u32().unwrap() as usize;
+                let addr = get_jmp(&mut buffer, &variables, &addr_table);
                 if cmp == Cmp::Equal {
                     buffer.set_rpos(addr);
                 }
             }
             JNE => {
-                let addr = buffer.pop_u32().unwrap() as usize;
+                let addr = get_jmp(&mut buffer, &variables, &addr_table);
                 if cmp != Cmp::Equal {
                     buffer.set_rpos(addr);
                 }
             }
             JG => {
-                let addr = buffer.pop_u32().unwrap() as usize;
+                let addr = get_jmp(&mut buffer, &variables, &addr_table);
                 if cmp == Cmp::Greater {
                     buffer.set_rpos(addr);
                 }
             }
             JGE => {
-                let addr = buffer.pop_u32().unwrap() as usize;
+                let addr = get_jmp(&mut buffer, &variables, &addr_table);
                 if cmp == Cmp::Greater || cmp == Cmp::Equal {
                     buffer.set_rpos(addr);
                 }
             }
             JL => {
-                let addr = buffer.pop_u32().unwrap() as usize;
+                let addr = get_jmp(&mut buffer, &variables, &addr_table);
                 if cmp == Cmp::Less {
                     buffer.set_rpos(addr);
                 }
             }
             JLE => {
-                let addr = buffer.pop_u32().unwrap() as usize;
+                let addr = get_jmp(&mut buffer, &variables, &addr_table);
                 if cmp == Cmp::Less || cmp == Cmp::Equal {
                     buffer.set_rpos(addr);
                 }
@@ -226,86 +334,88 @@ pub fn run(code: &[u8], args: Vec<String>) {
             }
             RET => {
                 if call_stack.len() == 0 {
+                    let value = ret.int_or(0);
+                    println!("Program exited with code {}", value);
                     break;
                 }
                 let addr = call_stack.pop().unwrap();
                 buffer.set_rpos(addr);
             }
             INC => {
-                get_variable(buffer.pop_u32().unwrap(), &mut variables).inc();
+                get_variable(&mut buffer, &mut variables).inc();
             }
             DEC => {
-                get_variable(buffer.pop_u32().unwrap(), &mut variables).dec();
+                get_variable(&mut buffer, &mut variables).dec();
             }
             ADD => {
                 get_variable(
-                    buffer.pop_u32().unwrap(),
+                    &mut buffer,
                     unsafe_multi_borrow_mut!(variables, Vec<Variable>)
                 ).add(&parse_variable(&mut buffer, &mut variables, &args, false));
             }
             SUB => {
                 get_variable(
-                    buffer.pop_u32().unwrap(),
+                    &mut buffer,
                     unsafe_multi_borrow_mut!(variables, Vec<Variable>)
                 ).sub(&parse_variable(&mut buffer, &mut variables, &args, false));
             }
             MUL => {
                 get_variable(
-                    buffer.pop_u32().unwrap(),
+                    &mut buffer,
                     unsafe_multi_borrow_mut!(variables, Vec<Variable>)
                 ).mul(&parse_variable(&mut buffer, &mut variables, &args, false));
             }
             DIV => {
                 get_variable(
-                    buffer.pop_u32().unwrap(),
+                    &mut buffer,
                     unsafe_multi_borrow_mut!(variables, Vec<Variable>)
                 ).div(&parse_variable(&mut buffer, &mut variables, &args, false));
             }
             MOD => {
                 get_variable(
-                    buffer.pop_u32().unwrap(),
+                    &mut buffer,
                     unsafe_multi_borrow_mut!(variables, Vec<Variable>)
                 ).rem(&parse_variable(&mut buffer, &mut variables, &args, false));
             }
             AND => {
                 get_variable(
-                    buffer.pop_u32().unwrap(),
+                    &mut buffer,
                     unsafe_multi_borrow_mut!(variables, Vec<Variable>)
                 ).and(&parse_variable(&mut buffer, &mut variables, &args, false));
             }
             OR => {
                 get_variable(
-                    buffer.pop_u32().unwrap(),
+                    &mut buffer,
                     unsafe_multi_borrow_mut!(variables, Vec<Variable>)
                 ).or(&parse_variable(&mut buffer, &mut variables, &args, false));
             }
             NOT => {
-                get_variable(buffer.pop_u32().unwrap(), &mut variables).not();
+                get_variable(&mut buffer, &mut variables).not();
             }
             NEG => {
-                get_variable(buffer.pop_u32().unwrap(), &mut variables).neg();
+                get_variable(&mut buffer, &mut variables).neg();
             }
             XOR => {
                 get_variable(
-                    buffer.pop_u32().unwrap(),
+                    &mut buffer,
                     unsafe_multi_borrow_mut!(variables, Vec<Variable>)
                 ).xor(&parse_variable(&mut buffer, &mut variables, &args, false));
             }
             SHL => {
                 get_variable(
-                    buffer.pop_u32().unwrap(),
+                    &mut buffer,
                     unsafe_multi_borrow_mut!(variables, Vec<Variable>)
                 ).shl(&parse_variable(&mut buffer, &mut variables, &args, false));
             }
             SHR => {
                 get_variable(
-                    buffer.pop_u32().unwrap(),
+                    &mut buffer,
                     unsafe_multi_borrow_mut!(variables, Vec<Variable>)
                 ).shr(&parse_variable(&mut buffer, &mut variables, &args, false));
             }
             SAR => {
                 get_variable(
-                    buffer.pop_u32().unwrap(),
+                    &mut buffer,
                     unsafe_multi_borrow_mut!(variables, Vec<Variable>)
                 ).sar(&parse_variable(&mut buffer, &mut variables, &args, false));
             }
@@ -338,12 +448,25 @@ pub fn run(code: &[u8], args: Vec<String>) {
                 variables[id] = ret.take();
             }
             CPY => {
-                let id = buffer.pop_u32().unwrap() as usize;
-                if variables.len() <= id {
-                    variables.resize(id + 1, Variable::Null);
+                let pos = buffer.get_rpos();
+                let ident = buffer.pop_u8().unwrap() as char;
+                if ident == DEREF {
+                    let id = buffer.pop_u32().unwrap() as usize;
+                    if variables.len() <= id {
+                        err("Setting a pointer variable must require the variable to already exist!".to_string());
+                    }
+                    let variable = parse_variable(&mut buffer, &mut variables, &args, false);
+                    variables[id].set_reference(variable);
                 }
-                let variable = parse_variable(&mut buffer, &mut variables, &args, false);
-                variables[id] = variable;
+                else {
+                    buffer.set_rpos(pos);
+                    let id = buffer.pop_u32().unwrap() as usize;
+                    if variables.len() <= id {
+                        variables.resize(id + 1, Variable::Null);
+                    }
+                    let variable = parse_variable(&mut buffer, &mut variables, &args, false);
+                    variables[id] = variable;
+                }
             }
             _ => err(format!("Unknown codec: {}!", codec)),
         }
@@ -364,7 +487,7 @@ enum Variable {
 
 impl Variable {
     fn take(&mut self) -> Variable {
-        std::mem::replace(self, Variable::Null)
+        mem::replace(self, Variable::Null)
     }
 
     fn is_zero(&self) -> bool {
@@ -377,6 +500,83 @@ impl Variable {
             Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().is_zero() }
             Variable::Null => true
         }
+    }
+
+    fn is_null(&self) -> bool {
+        match self {
+            Variable::Null => true,
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().is_null() }
+            _ => false
+        }
+    }
+
+    fn as_addr(&self) -> usize {
+        match self {
+            Variable::Char(c) => *c as usize,
+            Variable::Int(i) => *i as usize,
+            Variable::Float(f) => *f as usize,
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().as_addr() },
+            Variable::Null => 0,
+            _ => {
+                err("Variable is not convertible to an address!".to_string());
+                0
+            }
+        }
+    }
+
+    fn is_reference(&self) -> bool {
+        match self {
+            Variable::Reference(_) => true,
+            _ => false
+        }
+    }
+
+    fn set_reference(&mut self, val: Variable) {
+        match self {
+            Variable::Reference(ptr) => unsafe {
+                ptr.clone().write(val);
+            }
+            _ => err("Mutating reference value on non-reference!".to_string())
+        }
+    }
+
+    fn set_if_reference(&mut self, val: Variable) {
+        match self {
+            Variable::Reference(ptr) => unsafe {
+                ptr.clone().write(val);
+            }
+            _ => {
+                *self = val;
+            }
+        }
+    }
+
+    fn dereference(&self) -> Variable {
+        match self {
+            Variable::Reference(ptr) => unsafe {
+                ptr.clone().read()
+            }
+            _ => {
+                err("Cannot dereference a non-reference variable!".to_string());
+                self.clone()
+            }
+        }
+    }
+
+    fn dereference_ptr(&mut self) -> &mut Variable {
+        match self {
+            Variable::Reference(ptr) => unsafe {
+                ptr.as_mut().unwrap()
+            }
+            _ => {
+                err("Cannot dereference a non-reference variable!".to_string());
+                self
+            }
+        }
+    }
+
+    fn set(&mut self, val: Variable) {
+        *self = val;
     }
 
     fn not_null(&self) -> &Variable {
@@ -438,6 +638,13 @@ impl Variable {
                 err("Variable is not an integer!".to_string());
                 0
             }
+        }
+    }
+
+    fn int_or(&self, value: i64) -> i64 {
+        match self {
+            Variable::Int(i) => *i,
+            _ => value
         }
     }
 

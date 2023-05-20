@@ -8,5 +8,5 @@
     call git_push_upstream
     ret
 @message
-    push_ret #"Global variables and comments"
+    push_ret #"Chars, jump to variable, pointers"
     ret
