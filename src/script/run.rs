@@ -1,3 +1,4 @@
+use std::mem;
 use std::process::Command;
 use bytebuffer::ByteBuffer;
 use mvutils::save::Loader;
@@ -352,6 +353,7 @@ pub fn run(code: &[u8], args: Vec<String>) {
 #[derive(Clone, PartialEq, Debug, Default)]
 enum Variable {
     String(String),
+    Char(u32),
     Int(i64),
     Float(f64),
     Bool(bool),
@@ -371,6 +373,7 @@ impl Variable {
             Variable::Int(i) => *i == 0,
             Variable::Float(f) => *f == 0.0,
             Variable::Bool(b) => !*b,
+            Variable::Char(c) => *c == 0,
             Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().is_zero() }
             Variable::Null => true
         }
@@ -389,6 +392,18 @@ impl Variable {
         }
     }
 
+    fn char(&self) -> char {
+        match self {
+            Variable::Char(c) => unsafe { mem::transmute(*c) },
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().char() }
+            Variable::Null => '\0',
+            _ => {
+                err("Variable is not a char!".to_string());
+                '\0'
+            }
+        }
+    }
+
     fn string(&self) -> String {
         match self {
             Variable::String(s) => s.clone(),
@@ -396,6 +411,19 @@ impl Variable {
             Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().string() }
             _ => {
                 err("Variable is not a string!".to_string());
+                String::new()
+            }
+        }
+    }
+
+    fn string_or_char(&self) -> String {
+        match self {
+            Variable::String(s) => s.clone(),
+            Variable::Char(c) => unsafe { mem::transmute::<u32, char>(*c).to_string() },
+            Variable::Reference(ptr) => unsafe { ptr.clone().as_ref().unwrap().string_or_char() }
+            Variable::Null => "null".to_string(),
+            _ => {
+                err("Variable is not a string or char!".to_string());
                 String::new()
             }
         }
@@ -457,8 +485,56 @@ impl Variable {
                     Cmp::Empty
                 }
             }
+            Variable::Char(a) => match other {
+                Variable::Char(b) => {
+                    if a == b {
+                        Cmp::Equal
+                    }
+                    else if a < b {
+                        Cmp::Less
+                    }
+                    else {
+                        Cmp::Greater
+                    }
+                }
+                Variable::Int(b) => {
+                    let b = *b as u32;
+                    let a = *a;
+                    if a == b {
+                        Cmp::Equal
+                    }
+                    else if a < b {
+                        Cmp::Less
+                    }
+                    else {
+                        Cmp::Greater
+                    }
+                }
+                Variable::Float(b) => cmp_float(*a as u32 as f64, *b),
+                Variable::Null => Cmp::NotEqual,
+                Variable::Reference(ptr) => {
+                    self.compare(unsafe { ptr.clone().as_ref().unwrap() })
+                }
+                _ => {
+                    err("Cannot compare string with non number types!".to_string());
+                    Cmp::Empty
+                }
+            }
             Variable::Int(a) => match other {
                 Variable::Int(b) => {
+                    if a == b {
+                        Cmp::Equal
+                    }
+                    else if a < b {
+                        Cmp::Less
+                    }
+                    else {
+                        Cmp::Greater
+                    }
+                }
+                Variable::Char(b) => {
+                    let b = *b as i64;
+                    let a = *a;
                     if a == b {
                         Cmp::Equal
                     }
@@ -527,6 +603,9 @@ impl Variable {
             Variable::Float(f) => {
                 *f += 1.0;
             }
+            Variable::Char(c) => {
+                *c += 1;
+            }
             Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().inc() }
             _ => err("Cannot increment non number types!".to_string())
         }
@@ -539,6 +618,9 @@ impl Variable {
             }
             Variable::Float(f) => {
                 *f -= 1.0;
+            }
+            Variable::Char(c) => {
+                *c -= 1;
             }
             Variable::Reference(ptr) => unsafe { ptr.clone().as_mut().unwrap().dec() }
             _ => err("Cannot decrement non number types!".to_string())
@@ -554,6 +636,9 @@ impl Variable {
                 Variable::Float(b) => {
                     *a += *b as i64;
                 }
+                Variable::Char(b) => {
+                    *a += *b as i64;
+                }
                 Variable::Reference(ptr) => {
                     self.add(unsafe { ptr.clone().as_ref().unwrap() })
                 }
@@ -564,6 +649,24 @@ impl Variable {
                     *a += *b as f64;
                 }
                 Variable::Float(b) => {
+                    *a += *b;
+                }
+                Variable::Char(b) => {
+                    *a += *b as f64;
+                }
+                Variable::Reference(ptr) => {
+                    self.add(unsafe { ptr.clone().as_ref().unwrap() })
+                }
+                _ => err("Cannot add non number types!".to_string())
+            }
+            Variable::Char(a) => match other {
+                Variable::Int(b) => {
+                    *a += *b as u32;
+                }
+                Variable::Float(b) => {
+                    *a += *b as u32;
+                }
+                Variable::Char(b) => {
                     *a += *b;
                 }
                 Variable::Reference(ptr) => {
@@ -585,6 +688,9 @@ impl Variable {
                 Variable::Float(b) => {
                     *a -= *b as i64;
                 }
+                Variable::Char(b) => {
+                    *a -= *b as i64;
+                }
                 Variable::Reference(ptr) => {
                     self.sub(unsafe { ptr.clone().as_ref().unwrap() })
                 }
@@ -595,6 +701,24 @@ impl Variable {
                     *a -= *b as f64;
                 }
                 Variable::Float(b) => {
+                    *a -= *b;
+                }
+                Variable::Char(b) => {
+                    *a -= *b as f64;
+                }
+                Variable::Reference(ptr) => {
+                    self.sub(unsafe { ptr.clone().as_ref().unwrap() })
+                }
+                _ => err("Cannot subtract non number types!".to_string())
+            }
+            Variable::Char(a) => match other {
+                Variable::Int(b) => {
+                    *a -= *b as u32;
+                }
+                Variable::Float(b) => {
+                    *a -= *b as u32;
+                }
+                Variable::Char(b) => {
                     *a -= *b;
                 }
                 Variable::Reference(ptr) => {
@@ -616,6 +740,9 @@ impl Variable {
                 Variable::Float(b) => {
                     *a *= *b as i64;
                 }
+                Variable::Char(b) => {
+                    *a *= *b as i64;
+                }
                 Variable::Reference(ptr) => {
                     self.mul(unsafe { ptr.clone().as_ref().unwrap() })
                 }
@@ -626,6 +753,24 @@ impl Variable {
                     *a *= *b as f64;
                 }
                 Variable::Float(b) => {
+                    *a *= *b;
+                }
+                Variable::Char(b) => {
+                    *a *= *b as f64;
+                }
+                Variable::Reference(ptr) => {
+                    self.mul(unsafe { ptr.clone().as_ref().unwrap() })
+                }
+                _ => err("Cannot multiply non number types!".to_string())
+            }
+            Variable::Char(a) => match other {
+                Variable::Int(b) => {
+                    *a *= *b as u32;
+                }
+                Variable::Float(b) => {
+                    *a *= *b as u32;
+                }
+                Variable::Char(b) => {
                     *a *= *b;
                 }
                 Variable::Reference(ptr) => {
@@ -647,6 +792,9 @@ impl Variable {
                 Variable::Float(b) => {
                     *a /= *b as i64;
                 }
+                Variable::Char(b) => {
+                    *a /= *b as i64;
+                }
                 Variable::Reference(ptr) => {
                     self.div(unsafe { ptr.clone().as_ref().unwrap() })
                 }
@@ -657,6 +805,24 @@ impl Variable {
                     *a /= *b as f64;
                 }
                 Variable::Float(b) => {
+                    *a /= *b;
+                }
+                Variable::Char(b) => {
+                    *a /= *b as f64;
+                }
+                Variable::Reference(ptr) => {
+                    self.div(unsafe { ptr.clone().as_ref().unwrap() })
+                }
+                _ => err("Cannot divide non number types!".to_string())
+            }
+            Variable::Char(a) => match other {
+                Variable::Int(b) => {
+                    *a /= *b as u32;
+                }
+                Variable::Float(b) => {
+                    *a /= *b as u32;
+                }
+                Variable::Char(b) => {
                     *a /= *b;
                 }
                 Variable::Reference(ptr) => {
@@ -678,6 +844,9 @@ impl Variable {
                 Variable::Float(b) => {
                     *a %= *b as i64;
                 }
+                Variable::Char(b) => {
+                    *a %= *b as i64;
+                }
                 Variable::Reference(ptr) => {
                     self.rem(unsafe { ptr.clone().as_ref().unwrap() })
                 }
@@ -688,6 +857,24 @@ impl Variable {
                     *a %= *b as f64;
                 }
                 Variable::Float(b) => {
+                    *a %= *b;
+                }
+                Variable::Char(b) => {
+                    *a %= *b as f64;
+                }
+                Variable::Reference(ptr) => {
+                    self.rem(unsafe { ptr.clone().as_ref().unwrap() })
+                }
+                _ => err("Cannot modulo non number types!".to_string())
+            }
+            Variable::Char(a) => match other {
+                Variable::Int(b) => {
+                    *a %= *b as u32;
+                }
+                Variable::Float(b) => {
+                    *a %= *b as u32;
+                }
+                Variable::Char(b) => {
                     *a %= *b;
                 }
                 Variable::Reference(ptr) => {
@@ -708,6 +895,24 @@ impl Variable {
                 }
                 Variable::Float(b) => {
                     *a &= *b as i64;
+                }
+                Variable::Char(b) => {
+                    *a &= *b as i64;
+                }
+                Variable::Reference(ptr) => {
+                    self.and(unsafe { ptr.clone().as_ref().unwrap() })
+                }
+                _ => err("Cannot and non number types!".to_string())
+            }
+            Variable::Char(a) => match other {
+                Variable::Int(b) => {
+                    *a &= *b as u32;
+                }
+                Variable::Float(b) => {
+                    *a &= *b as u32;
+                }
+                Variable::Char(b) => {
+                    *a &= *b;
                 }
                 Variable::Reference(ptr) => {
                     self.and(unsafe { ptr.clone().as_ref().unwrap() })
@@ -737,6 +942,24 @@ impl Variable {
                 Variable::Float(b) => {
                     *a |= *b as i64;
                 }
+                Variable::Char(b) => {
+                    *a |= *b as i64;
+                }
+                Variable::Reference(ptr) => {
+                    self.or(unsafe { ptr.clone().as_ref().unwrap() })
+                }
+                _ => err("Cannot or non number types!".to_string())
+            }
+            Variable::Char(a) => match other {
+                Variable::Int(b) => {
+                    *a |= *b as u32;
+                }
+                Variable::Float(b) => {
+                    *a |= *b as u32;
+                }
+                Variable::Char(b) => {
+                    *a |= *b;
+                }
                 Variable::Reference(ptr) => {
                     self.or(unsafe { ptr.clone().as_ref().unwrap() })
                 }
@@ -765,6 +988,24 @@ impl Variable {
                 Variable::Float(b) => {
                     *a ^= *b as i64;
                 }
+                Variable::Char(b) => {
+                    *a ^= *b as i64;
+                }
+                Variable::Reference(ptr) => {
+                    self.xor(unsafe { ptr.clone().as_ref().unwrap() })
+                }
+                _ => err("Cannot xor non number types!".to_string())
+            }
+            Variable::Char(a) => match other {
+                Variable::Int(b) => {
+                    *a ^= *b as u32;
+                }
+                Variable::Float(b) => {
+                    *a ^= *b as u32;
+                }
+                Variable::Char(b) => {
+                    *a ^= *b;
+                }
                 Variable::Reference(ptr) => {
                     self.xor(unsafe { ptr.clone().as_ref().unwrap() })
                 }
@@ -788,6 +1029,9 @@ impl Variable {
         match self {
             Variable::Int(a) => {
                 *a = !*a;
+            }
+            Variable::Char(a) => {
+                *a =!*a;
             }
             Variable::Bool(a) => {
                 *a = !*a;
@@ -819,6 +1063,24 @@ impl Variable {
                 Variable::Float(b) => {
                     *a <<= *b as i64;
                 }
+                Variable::Char(b) => {
+                    *a <<= *b as i64;
+                }
+                Variable::Reference(ptr) => {
+                    self.shl(unsafe { ptr.clone().as_ref().unwrap() })
+                }
+                _ => err("Cannot shl non number types!".to_string())
+            }
+            Variable::Char(a) => match other {
+                Variable::Int(b) => {
+                    *a <<= *b as u32;
+                }
+                Variable::Float(b) => {
+                    *a <<= *b as u32;
+                }
+                Variable::Char(b) => {
+                    *a <<= *b;
+                }
                 Variable::Reference(ptr) => {
                     self.shl(unsafe { ptr.clone().as_ref().unwrap() })
                 }
@@ -838,6 +1100,24 @@ impl Variable {
                 Variable::Float(b) => {
                     *a = ((*a as u64) >> *b as i64) as i64;
                 }
+                Variable::Char(b) => {
+                    *a = ((*a as u64) >> *b as i64) as i64;
+                }
+                Variable::Reference(ptr) => {
+                    self.shr(unsafe { ptr.clone().as_ref().unwrap() })
+                }
+                _ => err("Cannot shr non number types!".to_string())
+            }
+            Variable::Char(a) => match other {
+                Variable::Int(b) => {
+                    *a = *a >> *b as u32;
+                }
+                Variable::Float(b) => {
+                    *a = *a >> *b as u32;
+                }
+                Variable::Char(b) => {
+                    *a = *a >> *b;
+                }
                 Variable::Reference(ptr) => {
                     self.shr(unsafe { ptr.clone().as_ref().unwrap() })
                 }
@@ -856,6 +1136,24 @@ impl Variable {
                 }
                 Variable::Float(b) => {
                     *a >>= *b as i64;
+                }
+                Variable::Char(b) => {
+                    *a >>= *b as i64;
+                }
+                Variable::Reference(ptr) => {
+                    self.sar(unsafe { ptr.clone().as_ref().unwrap() })
+                }
+                _ => err("Cannot sar non number types!".to_string())
+            }
+            Variable::Char(a) => match other {
+                Variable::Int(b) => {
+                    *a >>= *b as u32;
+                }
+                Variable::Float(b) => {
+                    *a >>= *b as u32;
+                }
+                Variable::Char(b) => {
+                    *a >>= *b;
                 }
                 Variable::Reference(ptr) => {
                     self.sar(unsafe { ptr.clone().as_ref().unwrap() })
@@ -887,6 +1185,7 @@ impl ToString for Variable {
     fn to_string(&self) -> String {
         match self {
             Variable::String(s) => s.clone(),
+            Variable::Char(c) => unsafe { mem::transmute::<u32, char>(*c).to_string() },
             Variable::Int(i) => format!("{}", i),
             Variable::Float(f) => format!("{}", f),
             Variable::Bool(b) => format!("{}", b),
