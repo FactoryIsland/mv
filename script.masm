@@ -9,5 +9,5 @@
     call git
     ret
 @message
-    push_ret #"Linker, imports, multiple files, .extern, renamed symbols, fixed comments, null"
+    push_ret #"Documentation"
     ret
