@@ -46,13 +46,13 @@ pub const ARGUMENT: char = '%';
 pub const VARIABLE: char = '$';
 pub const REFERENCE: char = '&';
 pub const DEREF: char = '*';
+pub const NULL: char = 'n';
 pub const INTEGER: char = 'i';
 pub const FLOAT: char = 'f';
 pub const CHAR: char = 'c';
 pub const BOOLEAN_TRUE: char = 1 as char;
 pub const BOOLEAN_FALSE: char = 0 as char;
 
-pub const UNKNOWN: u32 = 0;
 pub const GIT_ADD_ALL: u32 = 128;
 pub const GIT_ADD: u32 = 129;
 pub const GIT_COMMIT_DEFAULT: u32 = 130;

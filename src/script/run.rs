@@ -38,6 +38,27 @@ fn get_str_any(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable])
             }
             args[id as usize].clone()
         }
+        NULL => {
+            "null".to_string()
+        }
+        INTEGER => {
+            let value = buffer.pop_i64().unwrap();
+            format!("{}", value)
+        }
+        FLOAT => {
+            let value = buffer.pop_f64().unwrap();
+            format!("{}", value)
+        }
+        CHAR => unsafe {
+            let value = buffer.pop_u32().unwrap();
+            mem::transmute::<u32, char>(value).to_string()
+        }
+        BOOLEAN_TRUE => {
+            "true".to_string()
+        }
+        BOOLEAN_FALSE => {
+            "false".to_string()
+        }
         _ => {
             err(format!("Unknown string identifier: {}!", ident as u8));
             String::new()
@@ -130,6 +151,9 @@ fn parse_variable(buffer: &mut ByteBuffer, variables: &mut [Variable], args: &[S
             }
             Variable::String(args[id as usize].clone())
         }
+        NULL => {
+            Variable::Null
+        }
         INTEGER => {
             let value = buffer.pop_i64().unwrap();
             Variable::Int(value)
@@ -206,10 +230,12 @@ pub fn run(code: &[u8], args: Vec<String>) {
     }
 
     let mut addr = buffer.pop_u32().unwrap();
-    buffer.set_rpos(addr as usize);
-    loop {
-        addr = if let Some(v) = buffer.pop_u32() { v } else { break; };
-        addr_table.push(addr as usize);
+    if addr > 0 {
+        buffer.set_rpos(addr as usize);
+        loop {
+            addr = if let Some(v) = buffer.pop_u32() { v } else { break; };
+            addr_table.push(addr as usize);
+        }
     }
 
     buffer.set_rpos(main as usize);
@@ -1238,7 +1264,7 @@ impl Variable {
                 *a = !*a;
             }
             Variable::Char(a) => {
-                *a =!*a;
+                *a = !*a;
             }
             Variable::Bool(a) => {
                 *a = !*a;

@@ -1,3 +1,5 @@
 .named
+.extern lib.masm
 @main
+    call say_hi
     ret

@@ -1,0 +1,30 @@
+.named
+.use git_add
+.use git_add_all
+.use git_commit
+.use git_commit_default
+.use git_push
+.use git_push_upstream
+@git:
+    pop files
+    pop message
+    pop upstream
+    jn $files all
+    push $files
+    call git_add
+    jmp +2
+  .all:
+    call git_add_all
+    jn $message default
+    push $message
+    call git_commit
+    jmp +2
+  .default:
+    call git_commit_default
+    jn $upstream upstream
+    push $upstream
+    call git_push
+    ret
+  .upstream:
+    call git_push_upstream
+    ret

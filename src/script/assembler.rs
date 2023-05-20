@@ -37,6 +37,10 @@ macro_rules! named_var {
 }
 
 fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u32>, next_var: &mut u32, func: &str, globals: &[String]) -> u32 {
+    if token == "null" {
+        buffer.push_u8(NULL as u8);
+        return 1;
+    }
     let mut chars = token.chars();
     let ident = chars.next().unwrap();
     let str = chars.as_str();
@@ -96,6 +100,10 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
                 buffer.push_u8(BOOLEAN_FALSE as u8);
                 1
             }
+            else if token == "null" {
+                buffer.push_u8(NULL as u8);
+                1
+            }
             else if token.ends_with(CHAR) {
                 buffer.push_u8(CHAR as u8);
                 buffer.push_u32(token.split_at(token.len() - 1).0.parse::<u32>().unwrap());
@@ -149,6 +157,10 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
                 buffer.push_u8(BOOLEAN_FALSE as u8);
                 1
             }
+            else if token == "null" {
+                buffer.push_u8(NULL as u8);
+                1
+            }
             else if token.ends_with(CHAR) {
                 buffer.push_u8(CHAR as u8);
                 buffer.push_u32(token.split_at(token.len() - 1).0.parse::<u32>().unwrap());
@@ -197,6 +209,10 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             if token == "true" || token == "false" {
                 err("Argument cannot be of type boolean!".to_string());
                 0
+            }
+            else if token == "null" {
+                buffer.push_u8(NULL as u8);
+                1
             }
             else if token.ends_with(CHAR) {
                 buffer.push_u8(CHAR as u8);
@@ -291,9 +307,7 @@ pub fn jump(token: &str, index: u32, labels: &mut HashMap<String, u32>, calls: &
 }
 
 pub fn assemble(input: String) -> Vec<u8> {
-    let input = clean(&remove_quotes(&input.trim()));
-    let mut globals = extract_globals(&input);
-    globals.sort_unstable();
+    let (globals, usages, _, _) = extract(&input);
     let mut buffer = ByteBuffer::new();
     let mut tokens = input.split_whitespace();
     let mut index = 8;
@@ -387,15 +401,22 @@ pub fn assemble(input: String) -> Vec<u8> {
     }
 
     while let Some(s) = tokens.next() {
-        if s == ".global" {
+        if s == ".global" || s == ".use" || s == ".extern" {
             tokens.next();
+            continue;
+        }
+        else if s == ".named" {
             continue;
         }
         else if s.starts_with("@") {
             if !returned {
-                err("There was no return from previous function! This can lead to undefined behaviour!".to_string());
+                err("Labels and function names cannot start with a digit!".to_string());
             }
             let mut ident = s.split_at(1).1;
+            let first = ident.chars().next().unwrap();
+            if !(first.is_ascii_alphabetic() || first == '_') {
+                err("Labels and function names must start with an ascii alphabetic character or underscore!".to_string());
+            }
             if ident.ends_with(':') {
                 ident = ident.split_at(ident.len() - 1).0;
             }
@@ -414,6 +435,10 @@ pub fn assemble(input: String) -> Vec<u8> {
         }
         else if s.starts_with(".") {
             let mut ident = s.split_at(1).1;
+            let first = ident.chars().next().unwrap();
+            if !(first.is_ascii_alphabetic() || first == '_') {
+                err("Labels and function names must start with an ascii alphabetic character or underscore!".to_string());
+            }
             if ident.ends_with(':') {
                 ident = ident.split_at(ident.len() - 1).0;
             }
@@ -427,7 +452,7 @@ pub fn assemble(input: String) -> Vec<u8> {
             continue;
         }
         if func.is_empty() {
-            println!("Found instructions outside a function! These will not be called unless jumped to!");
+           err("Symbols outside functions are not allowed! If you want to execute instructions, put them into the @main function!".to_string());
         }
         addresses.push(index);
         index += 1;
@@ -498,7 +523,11 @@ pub fn assemble(input: String) -> Vec<u8> {
             "CALL" => {
                 buffer.push_u8(CALL);
                 let call = tokens.next().unwrap();
-                if BUILTIN_FUNCTIONS.contains_key(&call.to_ascii_uppercase().as_str()) {
+                let first = call.chars().next().unwrap();
+                if !(first.is_ascii_alphabetic() || first == '_') {
+                    err("Labels and function names must start with an ascii alphabetic character or underscore!".to_string());
+                }
+                if usages.binary_search(&call.to_ascii_uppercase()).is_ok() {
                     buffer.push_u8(BUILTIN as u8);
                     buffer.push_u32(*BUILTIN_FUNCTIONS.get(call.to_ascii_uppercase().as_str()).unwrap());
                     index += 5;
@@ -627,8 +656,8 @@ pub fn assemble(input: String) -> Vec<u8> {
 
     buffer.set_wpos(0);
     buffer.push_u32(functions[idents["main"] as usize]);
-    buffer.push_u32(buffer.len() as u32);
     if table {
+        buffer.push_u32(buffer.len() as u32);
         buffer.set_wpos(buffer.len());
         for addr in addresses.iter() {
             buffer.push_u32(*addr);
@@ -658,30 +687,54 @@ pub fn assemble(input: String) -> Vec<u8> {
     buffer.into_vec()
 }
 
-fn clean(s: &str) -> String {
-    s.lines().filter_map(|s| {
-        let s = s.trim();
-        if s.is_empty() || s.starts_with(";") {
-            None
-        }
-        else {
-            let mut s = s.split(';').next().unwrap().to_string();
-            s.push('\n');
-            Some(s)
-        }
-    }).collect()
-}
+pub fn extract(s: &str) -> (Vec<String>, Vec<String>, Vec<String>, Vec<String>) {
+    let mut globals = Vec::new();
+    let mut usages = Vec::new();
+    let mut externs = Vec::new();
+    let mut labels = Vec::new();
 
-fn extract_globals(s: &str) -> Vec<String> {
-    s.lines().filter_map(|s| {
-        let mut tokens = s.trim().split_whitespace();
-        if tokens.next().unwrap() == ".global" {
-            Some(tokens.next().unwrap().to_string())
+    let mut tokens = s.split_whitespace();
+
+    while let Some(token) = tokens.next() {
+        if !token.starts_with('.') || token == ".named" {
+            continue;
+        }
+        else if token == ".global" {
+            let name = tokens.next().expect(".global must be followed by a name!").to_string();
+            if globals.contains(&name) {
+                err(format!("Duplicate global variables named \"{}\"", name));
+            }
+            globals.push(name);
+        }
+        else if token == ".use" {
+            let usage = tokens.next().expect(".use must be followed by a builtin function name!").to_ascii_uppercase();
+            if !BUILTIN_FUNCTIONS.contains_key(&usage) {
+                err(format!("Unknown builtin function: {}", usage));
+            }
+            usages.push(usage);
+        }
+        else if token == ".extern" {
+            let name = tokens.next().expect(".extern must be followed by a module name!").to_string();
+            externs.push(name);
         }
         else {
-            None
+            let mut token = token.split_at(1).1;
+            let first = token.chars().next().unwrap();
+            if !(first.is_ascii_alphabetic() || first == '_') {
+                err("Labels and function names must start with an ascii alphabetic character or underscore!".to_string());
+            }
+            if token.ends_with(':') {
+                token = token.split_at(token.len() - 1).0;
+            }
+            labels.push(token.to_string());
         }
-    }).collect()
+    }
+
+    globals.sort_unstable();
+    usages.sort_unstable();
+    usages.dedup();
+
+    (globals, usages, externs, labels)
 }
 
 fn parse_char(s: &str) -> char {

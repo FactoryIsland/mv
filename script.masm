@@ -1,12 +1,13 @@
 .named
+.extern git.masm
 @main
     call message
     pop_ret message
+    push null
     push &message
-    call git_add_all
-    call git_commit
-    call git_push_upstream
+    push null
+    call git
     ret
 @message
-    push_ret #"Chars, jump to variable, pointers"
+    push_ret #"Linker, imports, multiple files, .extern, renamed symbols, fixed comments, null"
     ret
