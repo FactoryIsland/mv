@@ -1,4 +1,4 @@
-# MASM Custom Assembly Documentation
+# MASM Documentation
 
 MASM is a custom assembly language that compiles to bytecode through the use of the 'mvc' command line tool. The 'mvc' tool also allows you to execute the bytecode.
 
