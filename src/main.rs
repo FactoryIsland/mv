@@ -27,8 +27,6 @@ fn main() {
 
     let assembly = link(vec![test, lib]);
 
-    println!("{}", assembly);
-
     let bytecode = assemble(assembly);
     let mut file = OpenOptions::new().create(true).write(true).truncate(true).open("script.mv").unwrap();
     file.write_all(&bytecode).unwrap();

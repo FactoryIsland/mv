@@ -28,7 +28,6 @@ pub fn link(files: Vec<AssemblyFile>) -> String {
 
     files.into_iter().map(|f| {
         let input = remove_quotes(&clean(f.code.trim()));
-        println!("{}", input);
         (f.name, input.split_whitespace().collect::<Vec<_>>().join(" "))
     }).enumerate().map(|(i, (name, mut s))| {
         if !s.starts_with(".named") {
