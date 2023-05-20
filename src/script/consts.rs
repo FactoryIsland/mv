@@ -1,3 +1,5 @@
+use phf::{Map, phf_map};
+
 pub const NOOP: u8 = 0;
 pub const END: u8 = 1;
 pub const MOV: u8 = 2;
@@ -38,15 +40,6 @@ pub const PUSH_RET: u8 = 36;
 pub const POP_RET: u8 = 37;
 pub const CPY: u8 = 38;
 
-pub const BUILTIN_FUNCTIONS: [&str; 6] = [
-    "GIT_ADD_ALL",
-    "GIT_ADD",
-    "GIT_COMMIT_DEFAULT",
-    "GIT_COMMIT",
-    "GIT_PUSH_UPSTREAM",
-    "GIT_PUSH"
-];
-
 pub const BUILTIN: char = '@';
 pub const LITERAL: char = '#';
 pub const ARGUMENT: char = '%';
@@ -59,11 +52,19 @@ pub const CHAR: char = 'c';
 pub const BOOLEAN_TRUE: char = 1 as char;
 pub const BOOLEAN_FALSE: char = 0 as char;
 
-pub const BUILTIN_UNKNOWN: u32 = 0;
+pub const UNKNOWN: u32 = 0;
+pub const GIT_ADD_ALL: u32 = 128;
+pub const GIT_ADD: u32 = 129;
+pub const GIT_COMMIT_DEFAULT: u32 = 130;
+pub const GIT_COMMIT: u32 = 131;
+pub const GIT_PUSH_UPSTREAM: u32 = 132;
+pub const GIT_PUSH: u32 = 133;
 
-pub const BUILTIN_GIT_ADD_ALL: u32 = 128;
-pub const BUILTIN_GIT_ADD: u32 = 129;
-pub const BUILTIN_GIT_COMMIT_DEFAULT: u32 = 130;
-pub const BUILTIN_GIT_COMMIT: u32 = 131;
-pub const BUILTIN_GIT_PUSH_UPSTREAM: u32 = 132;
-pub const BUILTIN_GIT_PUSH: u32 = 133;
+pub static BUILTIN_FUNCTIONS: Map<&'static str, u32> = phf_map! {
+    "GIT_ADD_ALL" => GIT_ADD_ALL,
+    "GIT_ADD" => GIT_ADD ,
+    "GIT_COMMIT_DEFAULT" => GIT_COMMIT_DEFAULT,
+    "GIT_COMMIT" => GIT_COMMIT,
+    "GIT_PUSH_UPSTREAM" => GIT_PUSH_UPSTREAM,
+    "GIT_PUSH" => GIT_PUSH
+};

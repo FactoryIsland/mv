@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 bytebuffer = "2.1.1"
 mvutils = { path = "../MVUtils" }
+phf = { version = "0.11.1", features = ["macros"] }

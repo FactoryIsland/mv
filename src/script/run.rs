@@ -1414,24 +1414,24 @@ enum Cmp {
 
 fn call_function(id: u32, stack: &mut Vec<Variable>) {
     match id {
-        BUILTIN_GIT_ADD_ALL => {
+        GIT_ADD_ALL => {
             Command::new("git").arg("add").arg("*").spawn().unwrap().wait().unwrap();
         }
-        BUILTIN_GIT_ADD => {
+        GIT_ADD => {
             let str = stack.pop().unwrap().not_null().string();
             Command::new("git").arg("add").arg(str).spawn().unwrap().wait().unwrap();
         }
-        BUILTIN_GIT_COMMIT_DEFAULT => {
+        GIT_COMMIT_DEFAULT => {
             Command::new("git").arg("commit").arg("-m").arg("").spawn().unwrap().wait().unwrap();
         }
-        BUILTIN_GIT_COMMIT => {
+        GIT_COMMIT => {
             let str = stack.pop().unwrap().not_null().string();
             Command::new("git").arg("commit").arg("-m").arg(format!("{}", str)).spawn().unwrap().wait().unwrap();
         }
-        BUILTIN_GIT_PUSH_UPSTREAM => {
+        GIT_PUSH_UPSTREAM => {
             Command::new("git").arg("push").spawn().unwrap().wait().unwrap();
         }
-        BUILTIN_GIT_PUSH => {
+        GIT_PUSH => {
             let str = stack.pop().unwrap().not_null().string();
             Command::new("git").arg("push").arg("-u").args(str.split(" ")).spawn().unwrap().wait().unwrap();
         }

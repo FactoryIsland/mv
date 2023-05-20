@@ -498,9 +498,9 @@ pub fn assemble(input: String) -> Vec<u8> {
             "CALL" => {
                 buffer.push_u8(CALL);
                 let call = tokens.next().unwrap();
-                if BUILTIN_FUNCTIONS.contains(&call.to_ascii_uppercase().as_str()) {
+                if BUILTIN_FUNCTIONS.contains_key(&call.to_ascii_uppercase().as_str()) {
                     buffer.push_u8(BUILTIN as u8);
-                    buffer.push_u32(builtin(call.to_ascii_uppercase().as_str()));
+                    buffer.push_u32(*BUILTIN_FUNCTIONS.get(call.to_ascii_uppercase().as_str()).unwrap());
                     index += 5;
                     continue;
                 }
@@ -712,17 +712,5 @@ fn parse_char(s: &str) -> char {
     else {
         err(format!("Invalid string literal for character: {}", s));
         '\0'
-    }
-}
-
-fn builtin(name: &str) -> u32 {
-    match name {
-        "GIT_ADD_ALL" => BUILTIN_GIT_ADD_ALL,
-        "GIT_ADD" => BUILTIN_GIT_ADD,
-        "GIT_COMMIT_DEFAULT" => BUILTIN_GIT_COMMIT_DEFAULT,
-        "GIT_COMMIT" => BUILTIN_GIT_COMMIT,
-        "GIT_PUSH_UPSTREAM" => BUILTIN_GIT_PUSH_UPSTREAM,
-        "GIT_PUSH" => BUILTIN_GIT_PUSH,
-        _ => BUILTIN_UNKNOWN
     }
 }
