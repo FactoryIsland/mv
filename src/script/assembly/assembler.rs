@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use bytebuffer::ByteBuffer;
 use mvutils::save::{Loader, Saver};
-use mvutils::utils::{remove_quotes, format_escaped};
-use crate::script::consts::*;
+use mvutils::utils::format_escaped;
+use crate::script::assembly::consts::*;
 
 fn err(str: String) {
     eprintln!("{}", str);
@@ -20,13 +20,12 @@ macro_rules! named_var {
             }
             else {
                 let t = format!("{}_{}", $func, $token);
-                if $names.contains_key(&t) {
-                    $buffer.push_u32(*$names.get(&t).unwrap());
-                }
-                else {
-                    $names.insert(t, *$next);
+                if let std::collections::hash_map::Entry::Vacant(e) = $names.entry(t.clone()) {
+                    e.insert(*$next);
                     $buffer.push_u32(*$next);
                     *$next += 1;
+                } else {
+                    $buffer.push_u32(*$names.get(&t).unwrap());
                 }
             }
         }
@@ -109,15 +108,14 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
                 buffer.push_u32(token.split_at(token.len() - 1).0.parse::<u32>().unwrap());
                 5
             }
+            else if token.contains('.') {
+                buffer.push_u8(FLOAT as u8);
+                buffer.push_f64(token.parse::<f64>().unwrap());
+                9
+            }
             else {
-                if token.contains('.') {
-                    buffer.push_u8(FLOAT as u8);
-                    buffer.push_f64(token.parse::<f64>().unwrap());
-                }
-                else {
-                    buffer.push_u8(INTEGER as u8);
-                    buffer.push_i64(token.parse::<i64>().unwrap());
-                }
+                buffer.push_u8(INTEGER as u8);
+                buffer.push_i64(token.parse::<i64>().unwrap());
                 9
             }
         }
@@ -166,15 +164,14 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
                 buffer.push_u32(token.split_at(token.len() - 1).0.parse::<u32>().unwrap());
                 5
             }
+            else  if token.contains('.') {
+                buffer.push_u8(FLOAT as u8);
+                buffer.push_f64(token.parse::<f64>().unwrap());
+                9
+            }
             else {
-                if token.contains('.') {
-                    buffer.push_u8(FLOAT as u8);
-                    buffer.push_f64(token.parse::<f64>().unwrap());
-                }
-                else {
-                    buffer.push_u8(INTEGER as u8);
-                    buffer.push_i64(token.parse::<i64>().unwrap());
-                }
+                buffer.push_u8(INTEGER as u8);
+                buffer.push_i64(token.parse::<i64>().unwrap());
                 9
             }
         }
@@ -219,15 +216,14 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
                 buffer.push_u32(token.split_at(token.len() - 1).0.parse::<u32>().unwrap());
                 5
             }
+            else if token.contains('.') {
+                buffer.push_u8(FLOAT as u8);
+                buffer.push_f64(token.parse::<f64>().unwrap());
+                9
+            }
             else {
-                if token.contains('.') {
-                    buffer.push_u8(FLOAT as u8);
-                    buffer.push_f64(token.parse::<f64>().unwrap());
-                }
-                else {
-                    buffer.push_u8(INTEGER as u8);
-                    buffer.push_i64(token.parse::<i64>().unwrap());
-                }
+                buffer.push_u8(INTEGER as u8);
+                buffer.push_i64(token.parse::<i64>().unwrap());
                 9
             }
         }
@@ -254,13 +250,12 @@ macro_rules! named {
                 }
                 else {
                     let ident = format!("{}_{}", $func, token);
-                    if $names.contains_key(&ident) {
-                        $buffer.push_u32(*$names.get(&ident).unwrap());
-                    }
-                    else {
-                        $names.insert(ident, $next);
+                    if let std::collections::hash_map::Entry::Vacant(e) = $names.entry(ident.clone()) {
+                        e.insert($next);
                         $buffer.push_u32($next);
                         $next += 1;
+                    } else {
+                        $buffer.push_u32(*$names.get(&ident).unwrap());
                     }
                 }
             }
@@ -288,21 +283,19 @@ pub fn jump(token: &str, index: u32, labels: &mut HashMap<String, u32>, calls: &
         calls.push(location);
         calls.len() as u32 - 1
     }
-    else if token.chars().next().unwrap().is_digit(10) {
+    else if token.chars().next().unwrap().is_ascii_digit() {
         let location = token.parse::<u32>().unwrap();
         calls.push(location);
         calls.len() as u32 - 1
     }
+    else if labels.contains_key(token) {
+        *labels.get(token).unwrap()
+    }
     else {
-        if labels.contains_key(token) {
-            *labels.get(token).unwrap()
-        }
-        else {
-            calls.push(0);
-            let id = calls.len() as u32 - 1;
-            labels.insert(token.to_string(), id);
-            id
-        }
+        calls.push(0);
+        let id = calls.len() as u32 - 1;
+        labels.insert(token.to_string(), id);
+        id
     }
 }
 
@@ -377,13 +370,12 @@ pub fn assemble(input: String) -> Vec<u8> {
                     }
                     else {
                         let ident = format!("{}_{}", func, token);
-                        if names.contains_key(&ident) {
-                            buffer.push_u32(*names.get(&ident).unwrap());
-                        }
-                        else {
-                            names.insert(ident, next_var);
+                        if let std::collections::hash_map::Entry::Vacant(e) = names.entry(ident.clone()) {
+                            e.insert(next_var);
                             buffer.push_u32(next_var);
                             next_var += 1;
+                        } else {
+                            buffer.push_u32(*names.get(&ident).unwrap());
                         }
                     }
                 }
@@ -408,7 +400,7 @@ pub fn assemble(input: String) -> Vec<u8> {
         else if s == ".named" {
             continue;
         }
-        else if s.starts_with("@") {
+        else if s.starts_with('@') {
             if !returned {
                 err("Labels and function names cannot start with a digit!".to_string());
             }
@@ -433,7 +425,7 @@ pub fn assemble(input: String) -> Vec<u8> {
             returned = false;
             continue;
         }
-        else if s.starts_with(".") {
+        else if s.starts_with('.') {
             let mut ident = s.split_at(1).1;
             let first = ident.chars().next().unwrap();
             if !(first.is_ascii_alphabetic() || first == '_') {
@@ -539,7 +531,7 @@ pub fn assemble(input: String) -> Vec<u8> {
                 }
                 let id = idents[call];
                 calls.push(buffer.get_wpos());
-                buffer.push_u32(id as u32);
+                buffer.push_u32(id);
                 index += 4;
             }
             "RET" => {
@@ -671,7 +663,7 @@ pub fn assemble(input: String) -> Vec<u8> {
             err(format!("Invalid jump address: {}", addr));
         }
         buffer.set_wpos(jump);
-        buffer.write_u32(addresses[jump_calls[addr as usize] as usize]);
+        buffer.write_u32(addresses[jump_calls[addr] as usize]);
     }
 
     for call in calls {
@@ -681,7 +673,7 @@ pub fn assemble(input: String) -> Vec<u8> {
             err(format!("Invalid call address: {}", func));
         }
         buffer.set_wpos(call);
-        buffer.write_u32(functions[func as usize]);
+        buffer.write_u32(functions[func]);
     }
 
     buffer.into_vec()
@@ -741,7 +733,7 @@ fn parse_char(s: &str) -> char {
     if s.len() == 1 {
         s.chars().next().unwrap()
     }
-    else if s.len() == 2 && s.chars().next().unwrap() == '\\' {
+    else if s.len() == 2 && s.starts_with('\\') {
         let c = s.chars().nth(1).unwrap();
         match c {
             's' => ' ',
@@ -757,7 +749,7 @@ fn parse_char(s: &str) -> char {
     else if s.starts_with("\\x") || s.starts_with("\\u") {
         let c = u32::from_str_radix(&s[2..], 16).unwrap();
         let c = char::from_u32(c);
-        if let None = c {
+        if c.is_none() {
             err(format!("Invalid hex character: {}", s));
         }
         c.unwrap()

@@ -3,8 +3,8 @@ pub mod script;
 
 use std::fs::OpenOptions;
 use std::io::{Read, Write};
-use crate::script::assembler::assemble;
-use crate::script::linker::{AssemblyFile, link};
+use crate::script::assembly::assembler::assemble;
+use crate::script::assembly::linker::{AssemblyFile, link};
 use crate::script::run::run;
 
 fn main() {

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use mvutils::utils::remove_quotes;
-use crate::script::assembler::{extract};
+use crate::script::assembly::assembler::{extract};
 
 pub struct AssemblyFile {
     pub name: String,
@@ -29,7 +29,7 @@ pub fn link(files: Vec<AssemblyFile>) -> String {
     files.into_iter().map(|f| {
         let input = remove_quotes(&clean(f.code.trim()));
         (f.name, input.split_whitespace().collect::<Vec<_>>().join(" "))
-    }).enumerate().map(|(i, (name, mut s))| {
+    }).enumerate().map(|(i, (name, s))| {
         if !s.starts_with(".named") {
             err("Files that are linked are not allowed to be index-accessed. Use '.named' instead.".to_string());
         }
@@ -80,12 +80,10 @@ pub fn link(files: Vec<AssemblyFile>) -> String {
                 continue;
             }
             let first = token.chars().next().unwrap();
-            if first.is_ascii_alphabetic() || first == '_' {
-                if globals.contains(&token.to_string()) {
-                    code.push_str(&format!("{}_{}", name, token));
-                    code.push(' ');
-                    continue;
-                }
+            if (first.is_ascii_alphabetic() || first == '_') && globals.contains(&token.to_string()) {
+                code.push_str(&format!("{}_{}", name, token));
+                code.push(' ');
+                continue;
             }
             code.push_str(token);
             code.push(' ');
@@ -123,39 +121,36 @@ pub fn link(files: Vec<AssemblyFile>) -> String {
 fn clean(s: &str) -> String {
     s.lines().filter_map(|s| {
         let s = s.trim();
-        if s.is_empty() || s.starts_with(";") {
+        if s.is_empty() || s.starts_with(';') {
             None
         }
-        else {
-            if s.contains(';') {
-                let mut buffer = String::new();
-                let mut tokens = s.split(';');
-                let mut str = false;
-                while let Some(token) = tokens.next() {
-                    buffer.push_str(token);
-                    if token.ends_with('\'') {
-                        buffer.push(';');
-                        continue;
-                    }
-                    if token.chars().filter(|c| *c == '"').count() % 2 == 1 {
-                        str = !str;
-                    }
-                    if str {
-                        buffer.push(';');
-                        continue;
-                    }
-                    else {
-                        break;
-                    }
+        else if s.contains(';') {
+            let mut buffer = String::new();
+            let mut str = false;
+            for token in s.split(';') {
+                buffer.push_str(token);
+                if token.ends_with('\'') {
+                    buffer.push(';');
+                    continue;
                 }
-                buffer.push('\n');
-                Some(buffer)
+                if token.chars().filter(|c| *c == '"').count() % 2 == 1 {
+                    str = !str;
+                }
+                if str {
+                    buffer.push(';');
+                    continue;
+                }
+                else {
+                    break;
+                }
             }
-            else {
-                let mut s = s.to_string();
-                s.push('\n');
-                Some(s)
-            }
+            buffer.push('\n');
+            Some(buffer)
+        }
+        else {
+            let mut s = s.to_string();
+            s.push('\n');
+            Some(s)
         }
     }).collect()
 }
