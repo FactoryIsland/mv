@@ -8,10 +8,10 @@ use crate::script::linker::{AssemblyFile, link};
 use crate::script::run::run;
 
 fn main() {
-    let mut file = OpenOptions::new().read(true).open("script.masm").unwrap();
+    let mut file = OpenOptions::new().read(true).open("masm/script.masm").unwrap();
     let mut assembly = String::new();
     file.read_to_string(&mut assembly).unwrap();
-    let mut file = OpenOptions::new().read(true).open("git.masm").unwrap();
+    let mut file = OpenOptions::new().read(true).open("masm/git.masm").unwrap();
     let mut git = String::new();
     file.read_to_string(&mut git).unwrap();
 
@@ -28,7 +28,7 @@ fn main() {
     let assembly = link(vec![test, lib]);
 
     let bytecode = assemble(assembly);
-    let mut file = OpenOptions::new().create(true).write(true).truncate(true).open("script.mv").unwrap();
+    let mut file = OpenOptions::new().create(true).write(true).truncate(true).open("masm/script.mv").unwrap();
     file.write_all(&bytecode).unwrap();
     run(&bytecode, vec!["*".to_string(), "Fixed assembler strings".to_string()]);
 }
