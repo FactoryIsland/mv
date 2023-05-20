@@ -40,7 +40,7 @@ Variables are declared using the `mov` keyword. The syntax is `mov <variable> <v
 
 ### Named Variables
 
-Named variables can be enabled using the `.named` keyword. This is required for linking multiple files. If `.named` is not used, variables are all global and accessed through indexes like a massive array.
+Named variables can be enabled using the `.named` keyword. It must be the first line of the file, without trailing whitespace. This is required for linking multiple files. If `.named` is not used, variables are all global and accessed through indexes like a massive array.
 
 **IMPORTANT:** Currently named variable is required! Your code will not compile unless you use named variables.
 
