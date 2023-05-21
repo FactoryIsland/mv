@@ -219,7 +219,171 @@ impl Lexer {
                     }
                 }
                 ch => {
-                    return Token::Literal(Literal::Char(ch));
+                    return match ch {
+                        '(' => Token::LParen,
+                        ')' => Token::RParen,
+                        '[' => Token::LSquare,
+                        ']' => Token::RSquare,
+                        '{' => Token::LCurly,
+                        '}' => Token::RCurly,
+                        ',' => Token::Comma,
+                        '.' => Token::Dot,
+                        ':' => Token::Colon,
+                        ';' => Token::Semicolon,
+                        '-' => {
+                            match self.chars.peek() {
+                                Some('>') => {
+                                    self.chars.next();
+                                    Token::Arrow
+                                }
+                                Some('-') => {
+                                    self.chars.next();
+                                    Token::Operator(Operator::MinusMinus)
+                                }
+                                _ => Token::Operator(Operator::Minus)
+                            }
+                        }
+                        '=' => {
+                            match self.chars.peek() {
+                                Some('>') => {
+                                    self.chars.next();
+                                    Token::ThickArrow
+                                }
+                                Some('=') => {
+                                    self.chars.next();
+                                    Token::Operator(Operator::Equal)
+                                }
+                                _ => Token::Operator(Operator::Assign)
+                            }
+                        }
+                        '+' => {
+                            match self.chars.peek() {
+                                Some('+') => {
+                                    self.chars.next();
+                                    Token::Operator(Operator::PlusPlus)
+                                }
+                                Some('=') => {
+                                    self.chars.next();
+                                    Token::OperatorAssign(Operator::Plus)
+                                }
+                                _ => Token::Operator(Operator::Plus)
+                            }
+                        }
+                        '*' => {
+                            if let Some('=') = self.chars.peek() {
+                                self.chars.next();
+                                Token::OperatorAssign(Operator::Multiply)
+                            }
+                            else {
+                                Token::Operator(Operator::Multiply)
+                            }
+                        }
+                        '%' => {
+                            if let Some('=') = self.chars.peek() {
+                                self.chars.next();
+                                Token::OperatorAssign(Operator::Modulo)
+                            }
+                            else {
+                                Token::Operator(Operator::Modulo)
+                            }
+                        }
+                        '!' => {
+                            if let Some('=') = self.chars.peek() {
+                                self.chars.next();
+                                Token::Operator(Operator::NotEqual)
+                            }
+                            else {
+                                Token::Operator(Operator::Not)
+                            }
+                        }
+                        '<' => {
+                            match self.chars.peek() {
+                                Some('=') => {
+                                    self.chars.next();
+                                    Token::OperatorAssign(Operator::LessOrEqual)
+                                }
+                                Some('<') => {
+                                    self.chars.next();
+                                    if let Some('=') = self.chars.peek() {
+                                        self.chars.next();
+                                        Token::OperatorAssign(Operator::LeftShift)
+                                    }
+                                    else {
+                                        Token::Operator(Operator::LeftShift)
+                                    }
+                                }
+                                _ => Token::Operator(Operator::LessThan)
+                            }
+                        }
+                        '>' => {
+                            match self.chars.peek() {
+                                Some('=') => {
+                                    self.chars.next();
+                                    Token::OperatorAssign(Operator::GreaterOrEqual)
+                                }
+                                Some('>') => {
+                                    self.chars.next();
+                                    match self.chars.peek() {
+                                        Some('=') => {
+                                            self.chars.next();
+                                            Token::Operator(Operator::GreaterOrEqual)
+                                        }
+                                        Some('>') => {
+                                            self.chars.next();
+                                            if let Some('=') = self.chars.peek() {
+                                                self.chars.next();
+                                                Token::OperatorAssign(Operator::LogicalRightShift)
+                                            }
+                                            else {
+                                                Token::Operator(Operator::LogicalRightShift)
+                                            }
+                                        }
+                                        _ => Token::Operator(Operator::ArithmeticRightShift)
+                                    }
+                                }
+                                _ => Token::Operator(Operator::GreaterThan)
+                            }
+                        }
+                        '&' => {
+                            match self.chars.peek() {
+                                Some('&') => {
+                                    self.chars.next();
+                                    Token::Operator(Operator::And)
+                                }
+                                Some('=') => {
+                                    self.chars.next();
+                                    Token::OperatorAssign(Operator::BitwiseAnd)
+                                }
+                                _ => Token::Operator(Operator::BitwiseAnd)
+                            }
+                        }
+                        '|' => {
+                            match self.chars.peek() {
+                                Some('|') => {
+                                    self.chars.next();
+                                    Token::Operator(Operator::Or)
+                                }
+                                Some('=') => {
+                                    self.chars.next();
+                                    Token::OperatorAssign(Operator::BitwiseOr)
+                                }
+                                _ => Token::Operator(Operator::BitwiseOr)
+                            }
+                        }
+                        '^' => {
+                            if let Some('=') = self.chars.peek() {
+                                self.chars.next();
+                                Token::OperatorAssign(Operator::Xor)
+                            }
+                            else {
+                                Token::Operator(Operator::Xor)
+                            }
+                        }
+                        _ => {
+                            err(format!("Illegal character: '{}'", ch));
+                            Token::Literal(Literal::Char(ch))
+                        }
+                    }
                 }
             }
         }
