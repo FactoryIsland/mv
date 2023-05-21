@@ -30,6 +30,7 @@ pub enum Token {
 pub enum Keyword {
     Include,
     Use,
+    Args,
     Let,
     Fn,
     If,
@@ -42,6 +43,7 @@ pub enum Keyword {
 static KEYWORDS: Map<&'static str, Keyword> = phf_map! {
     "include" => Keyword::Include,
     "use" => Keyword::Use,
+    "args" => Keyword::Args,
     "let" => Keyword::Let,
     "fn" => Keyword::Fn,
     "if" => Keyword::If,
