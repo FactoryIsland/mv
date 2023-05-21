@@ -1,5 +1,7 @@
 .named
-.extern lib.masm
 @main
-    call say_hi
+    mov index 0
+    print %$index
+    inc index
+    print %$index
     ret

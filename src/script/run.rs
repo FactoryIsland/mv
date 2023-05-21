@@ -32,8 +32,18 @@ fn get_str_any(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable])
             reference.dereference().to_string()
         }
         ARGUMENT => {
-            let id = buffer.pop_u32().unwrap();
-            if id >= args.len() as u32 {
+            let ident = buffer.pop_u8().unwrap() as char;
+            let id = if ident == VARIABLE {
+                let index = buffer.pop_u32().unwrap();
+                if index >= variables.len() as u32 {
+                    err(format!("Argument id {} out of range!", index));
+                }
+                variables[index as usize].int() as usize
+            }
+            else {
+                buffer.pop_u16().unwrap() as usize
+            };
+            if id as usize >= args.len() {
                 err(format!("Argument id {} out of range!", id));
             }
             args[id as usize].clone()
@@ -89,8 +99,18 @@ fn get_str(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> 
             reference.dereference().not_null().string()
         }
         ARGUMENT => {
-            let id = buffer.pop_u32().unwrap();
-            if id >= args.len() as u32 {
+            let ident = buffer.pop_u8().unwrap() as char;
+            let id = if ident == VARIABLE {
+                let index = buffer.pop_u32().unwrap();
+                if index >= variables.len() as u32 {
+                    err(format!("Argument id {} out of range!", index));
+                }
+                variables[index as usize].int() as usize
+            }
+            else {
+                buffer.pop_u16().unwrap() as usize
+            };
+            if id as usize >= args.len() {
                 err(format!("Argument id {} out of range!", id));
             }
             args[id as usize].clone()
@@ -146,8 +166,18 @@ fn parse_variable(buffer: &mut ByteBuffer, variables: &mut [Variable], args: &[S
             }
         }
         ARGUMENT => {
-            let id = buffer.pop_u32().unwrap();
-            if id >= args.len() as u32 {
+            let ident = buffer.pop_u8().unwrap() as char;
+            let id = if ident == VARIABLE {
+                let index = buffer.pop_u32().unwrap();
+                if index >= variables.len() as u32 {
+                    err(format!("Argument id {} out of range!", index));
+                }
+                variables[index as usize].int() as usize
+            }
+            else {
+                buffer.pop_u16().unwrap() as usize
+            };
+            if id as usize >= args.len() {
                 err(format!("Argument id {} out of range!", id));
             }
             Variable::String(args[id as usize].clone())

@@ -57,8 +57,17 @@ fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             offset += 4;
         }
         ARGUMENT => {
-            buffer.push_u32(token.parse::<u32>().unwrap());
-            offset += 4;
+            if str.starts_with([VARIABLE, REFERENCE, DEREF]) {
+                buffer.push_u8(VARIABLE as u8);
+                let str = str.split_at(1).1;
+                named_var!(names, buffer, str, next_var, func, globals);
+                offset += 5;
+            }
+            else {
+                buffer.push_u8(0);
+                buffer.push_u16(token.parse::<u16>().unwrap());
+                offset += 3;
+            }
         }
         _ => err(format!("Invalid string identifier: {}", ident))
     }
@@ -81,9 +90,18 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
             5
         }
         ARGUMENT => {
-            buffer.push_u8(ARGUMENT as u8);
-            buffer.push_u32(token.split_at(1).1.parse::<u32>().unwrap());
-            5
+            let str = token.split_at(1).1;
+            if str.starts_with([VARIABLE, REFERENCE, DEREF]) {
+                buffer.push_u8(VARIABLE as u8);
+                let str = str.split_at(1).1;
+                named_var!(names, buffer, str, next_var, func, globals);
+                5
+            }
+            else {
+                buffer.push_u8(0);
+                buffer.push_u16(token.parse::<u16>().unwrap());
+                3
+            }
         }
         '\'' => {
             let c = parse_char(&token.replace('\'', ""), err);
@@ -137,9 +155,18 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
             5
         }
         ARGUMENT => {
-            buffer.push_u8(ARGUMENT as u8);
-            buffer.push_u32(token.split_at(1).1.parse::<u32>().unwrap());
-            5
+            let str = token.split_at(1).1;
+            if str.starts_with([VARIABLE, REFERENCE, DEREF]) {
+                buffer.push_u8(VARIABLE as u8);
+                let str = str.split_at(1).1;
+                named_var!(names, buffer, str, next_var, func, globals);
+                5
+            }
+            else {
+                buffer.push_u8(0);
+                buffer.push_u16(token.parse::<u16>().unwrap());
+                3
+            }
         }
         '\'' => {
             let c = parse_char(&token.replace('\'', ""), err);
@@ -193,9 +220,18 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             5
         }
         ARGUMENT => {
-            buffer.push_u8(ARGUMENT as u8);
-            buffer.push_u32(token.split_at(1).1.parse::<u32>().unwrap());
-            5
+            let str = token.split_at(1).1;
+            if str.starts_with([VARIABLE, REFERENCE, DEREF]) {
+                buffer.push_u8(VARIABLE as u8);
+                let str = str.split_at(1).1;
+                named_var!(names, buffer, str, next_var, func, globals);
+                5
+            }
+            else {
+                buffer.push_u8(0);
+                buffer.push_u16(token.parse::<u16>().unwrap());
+                3
+            }
         }
         '\'' => {
             let c = parse_char(&token.replace('\'', ""), err);
