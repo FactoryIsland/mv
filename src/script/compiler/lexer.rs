@@ -37,7 +37,12 @@ pub enum Keyword {
     Else,
     While,
     For,
-    Return
+    Return,
+    Int,
+    Float,
+    String,
+    Bool,
+    Char
 }
 
 static KEYWORDS: Map<&'static str, Keyword> = phf_map! {
@@ -50,7 +55,12 @@ static KEYWORDS: Map<&'static str, Keyword> = phf_map! {
     "else" => Keyword::Else,
     "while" => Keyword::While,
     "for" => Keyword::For,
-    "return" => Keyword::Return
+    "return" => Keyword::Return,
+    "int" => Keyword::Int,
+    "float" => Keyword::Float,
+    "String" => Keyword::String,
+    "bool" => Keyword::Bool,
+    "char" => Keyword::Char
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
