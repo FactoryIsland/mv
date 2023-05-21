@@ -9,5 +9,5 @@
     call git
     ret
 @message
-    push_ret #"Documentation"
+    push_ret #"Started mvscript"
     ret

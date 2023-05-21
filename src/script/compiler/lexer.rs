@@ -1,6 +1,7 @@
 use std::alloc::{alloc, dealloc, Layout};
 use std::iter::Peekable;
 use std::str::Chars;
+use phf::{Map, phf_map};
 use crate::script::utils::parse_char;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -27,6 +28,8 @@ pub enum Token {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Keyword {
+    Include,
+    Use,
     Let,
     Fn,
     If,
@@ -35,6 +38,18 @@ pub enum Keyword {
     For,
     Return
 }
+
+static KEYWORDS: Map<&'static str, Keyword> = phf_map! {
+    "include" => Keyword::Include,
+    "use" => Keyword::Use,
+    "let" => Keyword::Let,
+    "fn" => Keyword::Fn,
+    "if" => Keyword::If,
+    "else" => Keyword::Else,
+    "while" => Keyword::While,
+    "for" => Keyword::For,
+    "return" => Keyword::Return
+};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Operator {
@@ -98,7 +113,7 @@ impl Lexer {
     pub fn next_token(&mut self) -> Token {
         while let Some(ch) = self.chars.next() {
             match ch {
-                ' ' | '\n' | '\t' | '\r' => {}
+                ch if ch.is_whitespace() => {}
                 '/' => {
                     match self.chars.peek() {
                         Some('/') => {
@@ -148,7 +163,30 @@ impl Lexer {
                     return Token::Literal(Literal::String(buffer));
                 }
                 ch if ch.is_alphabetic() => {
-
+                    let mut buffer = String::new();
+                    buffer.push(ch);
+                    while let Some(ch) = self.chars.peek() {
+                        if ch.is_ascii_alphanumeric() || *ch == '_' {
+                            buffer.push(self.chars.next().unwrap());
+                        } else {
+                            break;
+                        }
+                    }
+                    return if buffer == "true" {
+                        Token::Literal(Literal::Bool(true))
+                    }
+                    else if buffer == "false" {
+                        Token::Literal(Literal::Bool(false))
+                    }
+                    else if buffer == "null" {
+                        Token::Literal(Literal::Null)
+                    }
+                    else if KEYWORDS.contains_key(&buffer) {
+                        Token::Keyword(KEYWORDS[&buffer].clone())
+                    }
+                    else {
+                        Token::Identifier(buffer)
+                    };
                 }
                 ch if ch.is_ascii_digit() => {
                     let mut buffer = String::new();
@@ -168,14 +206,20 @@ impl Lexer {
                         }
                     }
                     return if buffer.contains('.') {
-                        Token::Literal(Literal::Float(buffer.parse().unwrap()))
+                        Token::Literal(Literal::Float(buffer.parse().unwrap_or_else(|e| {
+                            err(format!("Failed to parse float \"{}\": {}", buffer, e));
+                            0f64
+                        })))
                     }
                     else {
-                        Token::Literal(Literal::Integer(buffer.parse().unwrap()))
+                        Token::Literal(Literal::Integer(buffer.parse().unwrap_or_else(|e| {
+                            err(format!("Failed to parse integer \"{}\": {}", buffer, e));
+                            0i64
+                        })))
                     }
                 }
                 ch => {
-
+                    return Token::Literal(Literal::Char(ch));
                 }
             }
         }
