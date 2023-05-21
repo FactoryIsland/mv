@@ -5,7 +5,7 @@ MASM is a custom assembly language that compiles to bytecode through the use of 
 ### Datatypes
 
 - Integer: 64-bit signed integer. Is represented by a simple number without a '.', for example `10`.
-- Float: 64-bit floating point. Is represented by a simple number with a '.' or a number ending in 'f', for example `10.0` or `10f`.
+- Float: 64-bit floating point. Is represented by a simple number with a '.', for example `10.0`.
 - Character: Represented as a 32-bit unsigned integer for arithmetic. Is represented by a character in single quotes or a number engine in 'c', for example `'a'` or `97c`.
 - Boolean: True or false. Is represented by `true` or `false`.
 - String: A heap-allocated char array. String literals start with a '#', followed by quotes, for example `#"Hello, World!"`.

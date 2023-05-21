@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use hashbrown::HashSet;
 use mvutils::utils::remove_quotes;
 use crate::script::assembly::assembler::{extract};
 

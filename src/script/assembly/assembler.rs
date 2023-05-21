@@ -1,8 +1,9 @@
-use std::collections::HashMap;
+use hashbrown::HashMap;
 use bytebuffer::ByteBuffer;
 use mvutils::save::{Loader, Saver};
 use mvutils::utils::format_escaped;
 use crate::script::assembly::consts::*;
+use crate::script::utils::parse_char;
 
 fn err(str: String) {
     eprintln!("{}", str);
@@ -20,7 +21,7 @@ macro_rules! named_var {
             }
             else {
                 let t = format!("{}_{}", $func, $token);
-                if let std::collections::hash_map::Entry::Vacant(e) = $names.entry(t.clone()) {
+                if let hashbrown::hash_map::Entry::Vacant(e) = $names.entry(t.clone()) {
                     e.insert(*$next);
                     $buffer.push_u32(*$next);
                     *$next += 1;
@@ -85,7 +86,7 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
             5
         }
         '\'' => {
-            let c = parse_char(&token.replace('\'', ""));
+            let c = parse_char(&token.replace('\'', ""), err);
             buffer.push_u8(CHAR as u8);
             buffer.push_u32(c as u32);
             5
@@ -141,7 +142,7 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
             5
         }
         '\'' => {
-            let c = parse_char(&token.replace('\'', ""));
+            let c = parse_char(&token.replace('\'', ""), err);
             buffer.push_u8(CHAR as u8);
             buffer.push_u32(c as u32);
             5
@@ -197,7 +198,7 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             5
         }
         '\'' => {
-            let c = parse_char(&token.replace('\'', ""));
+            let c = parse_char(&token.replace('\'', ""), err);
             buffer.push_u8(CHAR as u8);
             buffer.push_u32(c as u32);
             5
@@ -250,7 +251,7 @@ macro_rules! named {
                 }
                 else {
                     let ident = format!("{}_{}", $func, token);
-                    if let std::collections::hash_map::Entry::Vacant(e) = $names.entry(ident.clone()) {
+                    if let hashbrown::hash_map::Entry::Vacant(e) = $names.entry(ident.clone()) {
                         e.insert($next);
                         $buffer.push_u32($next);
                         $next += 1;
@@ -370,7 +371,7 @@ pub fn assemble(input: String) -> Vec<u8> {
                     }
                     else {
                         let ident = format!("{}_{}", func, token);
-                        if let std::collections::hash_map::Entry::Vacant(e) = names.entry(ident.clone()) {
+                        if let hashbrown::hash_map::Entry::Vacant(e) = names.entry(ident.clone()) {
                             e.insert(next_var);
                             buffer.push_u32(next_var);
                             next_var += 1;
@@ -727,35 +728,4 @@ pub fn extract(s: &str) -> (Vec<String>, Vec<String>, Vec<String>, Vec<String>) 
     usages.dedup();
 
     (globals, usages, externs, labels)
-}
-
-fn parse_char(s: &str) -> char {
-    if s.len() == 1 {
-        s.chars().next().unwrap()
-    }
-    else if s.len() == 2 && s.starts_with('\\') {
-        let c = s.chars().nth(1).unwrap();
-        match c {
-            's' => ' ',
-            'n' => '\n',
-            'r' => '\r',
-            't' => '\t',
-            'b' => '\x08',
-            'f' => '\x0c',
-            'v' => '\x0b',
-            _ => c
-        }
-    }
-    else if s.starts_with("\\x") || s.starts_with("\\u") {
-        let c = u32::from_str_radix(&s[2..], 16).unwrap();
-        let c = char::from_u32(c);
-        if c.is_none() {
-            err(format!("Invalid hex character: {}", s));
-        }
-        c.unwrap()
-    }
-    else {
-        err(format!("Invalid string literal for character: {}", s));
-        '\0'
-    }
 }
