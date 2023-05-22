@@ -56,16 +56,66 @@ impl Parser {
     pub fn parse_element(&mut self, token: Token) -> Result<Element, ParseError> {
         if let Token::Keyword(keyword) = token {
             match keyword {
-                Keyword::Include => {},
-                Keyword::Use => {},
-                Keyword::Const => {},
-                Keyword::Let => {},
-                Keyword::Fn => {},
-                _ => Err(format!("Unexpected token, expected 'include' | 'use' | 'const' | 'let' | 'fn', found {:?}", keyword).into())
+                Keyword::Include => {
+                    let token = self.lexer.next_token();
+                    return if let Token::Identifier(name) = token {
+                        let token = self.lexer.next_token();
+                        if let Token::Semicolon = token {
+                            Ok(Element::Statement(TopLevelStatement::Include(name)))
+                        }
+                        else {
+                            Err(format!("Include: Unexpected token, expected ';', got {}", token).into())
+                        }
+                    }
+                    else {
+                        Err(format!("Include: Unexpected token, expected identifier, got {}", token).into())
+                    };
+                },
+                Keyword::Use => Ok(Element::Statement(TopLevelStatement::Use(self.parse_use()?))),
+                Keyword::Const => Ok(Element::Empty),
+                Keyword::Let => Ok(Element::Statement(TopLevelStatement::Declaration(self.parse_declaration()?))),
+                Keyword::Fn => Ok(Element::Function(self.parse_fn()?)),
+                _ => Err(format!("File: Unexpected keyword, expected 'include' | 'use' | 'const' | 'let' | 'fn', found {}", keyword).into())
             }
         }
         else {
-            Err(format!("Unexpected token, expected Keyword, found {:?}", token).into())
+            Err(format!("File: Unexpected token, expected Keyword, found {}", token).into())
         }
+    }
+
+    pub fn parse_use(&mut self) -> Result<Vec<String>, ParseError> {
+        let mut res = Vec::new();
+        let token = self.lexer.next_token();
+        if let Token::Identifier(usage) = token {
+            res.push(usage);
+        }
+        else {
+            return Err(format!("Use: Unexpected token, expected Identifier, found {}", token).into());
+        }
+        while let Some(token) = self.lexer.next() {
+            match token {
+                Token::Semicolon => break,
+                Token::Comma => {},
+                _ => {
+                    return Err(format!("Use: Unexpected token, expected ';' or ',', found {}", token).into())
+                }
+            }
+        }
+        let token = self.lexer.next_token();
+        if let Token::Identifier(usage) = token {
+            res.push(usage);
+        }
+        else {
+            return Err(format!("Use: Unexpected token, expected Identifier, found {}", token).into());
+        }
+        Ok(res)
+    }
+
+    pub fn parse_declaration(&mut self) -> Result<Declaration, ParseError> {
+        Err("".into())
+    }
+
+    pub fn parse_fn(&mut self) -> Result<Function, ParseError> {
+        Err("".into())
     }
 }

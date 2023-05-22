@@ -21,13 +21,14 @@ impl Program {
 pub enum Element {
     Statement(TopLevelStatement),
     Function(Function),
+    Empty,
 }
 
 #[derive(Debug, Clone)]
 pub enum TopLevelStatement {
     Declaration(Declaration),
-    Include(IncludeStatement),
-    Use(UseStatement),
+    Include(String),
+    Use(Vec<String>),
 }
 
 #[derive(Debug, Clone)]
@@ -57,16 +58,6 @@ pub enum Type {
     Char,
     String,
     Bool
-}
-
-#[derive(Debug, Clone)]
-pub struct IncludeStatement {
-    pub what: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct UseStatement {
-    pub what: Vec<String>,
 }
 
 #[derive(Debug, Clone)]

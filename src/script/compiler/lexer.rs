@@ -1,6 +1,7 @@
 use std::alloc::{alloc, dealloc, Layout};
 use std::iter::Peekable;
 use std::str::Chars;
+use std::fmt::Display;
 use phf::{Map, phf_map};
 use crate::script::utils::parse_char;
 
@@ -26,6 +27,32 @@ pub enum Token {
     Eof
 }
 
+impl Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Token::Identifier(i) => i.clone(),
+            Token::Keyword(word) => word.to_string(),
+            Token::Operator(op) => op.to_string(),
+            Token::OperatorAssign(op) => (op.to_string() + "="),
+            Token::Literal(lit) => lit.to_string(),
+            Token::LParen => "(".to_string(),
+            Token::RParen => ")".to_string(),
+            Token::LSquare => "[".to_string(),
+            Token::RSquare => "]".to_string(),
+            Token::LCurly => "{".to_string(),
+            Token::RCurly => "}".to_string(),
+            Token::Comma => ",".to_string(),
+            Token::Dot => ".".to_string(),
+            Token::Colon => ":".to_string(),
+            Token::Semicolon => ";".to_string(),
+            Token::Arrow => "->".to_string(),
+            Token::ThickArrow => "=>".to_string(),
+            Token::Eof => "eof".to_string()
+        };
+        f.write_str(&s)
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Keyword {
     Include,
@@ -44,6 +71,30 @@ pub enum Keyword {
     String,
     Bool,
     Char
+}
+
+impl Display for Keyword {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Keyword::Include => "include",
+            Keyword::Use => "use",
+            Keyword::Args => "args",
+            Keyword::Let => "let",
+            Keyword::Const => "const",
+            Keyword::Fn => "fn",
+            Keyword::If => "if",
+            Keyword::Else => "else",
+            Keyword::While => "while",
+            Keyword::For => "for",
+            Keyword::Return => "return",
+            Keyword::Int => "int",
+            Keyword::Float => "float",
+            Keyword::String => "String",
+            Keyword::Bool => "bool",
+            Keyword::Char => "char"
+        };
+        f.write_str(s)
+    }
 }
 
 static KEYWORDS: Map<&'static str, Keyword> = phf_map! {
@@ -92,6 +143,37 @@ pub enum Operator {
     ArithmeticRightShift
 }
 
+impl Display for Operator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Operator::Plus => "+",
+            Operator::PlusPlus => "++",
+            Operator::Minus => "-",
+            Operator::MinusMinus => "--",
+            Operator::Multiply => "*",
+            Operator::Divide => "/",
+            Operator::Modulo => "%",
+            Operator::Assign => "=",
+            Operator::Equal => "==",
+            Operator::NotEqual => "!=",
+            Operator::LessThan => "<",
+            Operator::GreaterThan => ">",
+            Operator::LessOrEqual => "<=",
+            Operator::GreaterOrEqual => ">=",
+            Operator::And => "&&",
+            Operator::BitwiseAnd => "&",
+            Operator::Or => "||",
+            Operator::BitwiseOr => "|",
+            Operator::Xor => "^",
+            Operator::Not => "!",
+            Operator::LeftShift => "<<",
+            Operator::LogicalRightShift => ">>",
+            Operator::ArithmeticRightShift => ">>>",
+        };
+        f.write_str(s)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Integer(i64),
@@ -100,6 +182,20 @@ pub enum Literal {
     String(String),
     Bool(bool),
     Null
+}
+
+impl Display for Literal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Literal::Integer(i) => i.to_string(),
+            Literal::Float(f) => f.to_string(),
+            Literal::Char(c) => c.to_string(),
+            Literal::String(s) => s.clone(),
+            Literal::Bool(b) => b.to_string(),
+            Literal::Null => "null".to_string()
+        };
+        f.write_str(&s)
+    }
 }
 
 pub fn err(msg: String) {
