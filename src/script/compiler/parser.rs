@@ -72,7 +72,17 @@ impl Parser {
                     };
                 },
                 Keyword::Use => Ok(Element::Statement(TopLevelStatement::Use(self.parse_use()?))),
-                Keyword::Const => Ok(Element::Empty),
+                Keyword::Const => {
+                    let token = self.lexer.next_token();
+                    let name = if let Token::Identifier(n) = token {
+                        n
+                    }
+                    else {
+                        return Err(format!("Const: Unexpected token, expected identifier, got {}", token).into());
+                    };
+
+                    Ok(Element::Empty)
+                },
                 Keyword::Let => Ok(Element::Statement(TopLevelStatement::Declaration(self.parse_declaration()?))),
                 Keyword::Fn => Ok(Element::Function(self.parse_fn()?)),
                 _ => Err(format!("File: Unexpected keyword, expected 'include' | 'use' | 'const' | 'let' | 'fn', found {}", keyword).into())

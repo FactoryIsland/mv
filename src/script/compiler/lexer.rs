@@ -33,7 +33,7 @@ impl Display for Token {
             Token::Identifier(i) => i.clone(),
             Token::Keyword(word) => word.to_string(),
             Token::Operator(op) => op.to_string(),
-            Token::OperatorAssign(op) => (op.to_string() + "="),
+            Token::OperatorAssign(op) => op.to_string() + "=",
             Token::Literal(lit) => lit.to_string(),
             Token::LParen => "(".to_string(),
             Token::RParen => ")".to_string(),
