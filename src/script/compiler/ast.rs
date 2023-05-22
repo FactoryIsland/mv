@@ -1,4 +1,5 @@
-use crate::script::compiler::lexer::{Literal, Operator};
+use crate::script::compiler::lexer::*;
+use crate::script::compiler::parser::*;
 
 #[derive(Debug, Clone)]
 pub struct Program {
@@ -51,13 +52,34 @@ pub enum Expression {
     Call(CallExpression)
 }
 
+impl Expression {
+    pub fn infer_type(&self) -> Option<Type> {
+        None
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Type {
-    Integer,
+    Int,
     Float,
     Char,
     String,
     Bool
+}
+
+impl TryFrom<Keyword> for Type {
+    type Error = ParseError;
+
+    fn try_from(k: Keyword) -> Result<Self, ParseError> {
+        match k {
+            Keyword::Int => Ok(Type::Int),
+            Keyword::Float => Ok(Type::Float),
+            Keyword::String => Ok(Type::String),
+            Keyword::Bool => Ok(Type::Bool),
+            Keyword::Char => Ok(Type::Char),
+            _ => Err(format!("Type: Invalid keyword for type {}", k).into())
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -73,15 +73,14 @@ impl Parser {
                 },
                 Keyword::Use => Ok(Element::Statement(TopLevelStatement::Use(self.parse_use()?))),
                 Keyword::Const => {
-                    let token = self.lexer.next_token();
-                    let name = if let Token::Identifier(n) = token {
-                        n
+                    let declaration = self.parse_declaration()?;
+                    if declaration.value.is_none() {
+                        Err("Const: Must have a value".into())
                     }
                     else {
-                        return Err(format!("Const: Unexpected token, expected identifier, got {}", token).into());
-                    };
-
-                    Ok(Element::Empty)
+                        //do stuff later
+                        Ok(Element::Empty)
+                    }
                 },
                 Keyword::Let => Ok(Element::Statement(TopLevelStatement::Declaration(self.parse_declaration()?))),
                 Keyword::Fn => Ok(Element::Function(self.parse_fn()?)),
@@ -122,10 +121,69 @@ impl Parser {
     }
 
     pub fn parse_declaration(&mut self) -> Result<Declaration, ParseError> {
-        Err("".into())
+        let token = self.lexer.next_token();
+        if let Token::Identifier(name) = token {
+            let mut ty = None;
+            let mut token = self.lexer.next_token();
+            if let Token::Colon = token {
+                token = self.lexer.next_token();
+                if let Token::Keyword(word) = token {
+                    ty = Some(Type::try_from(word)?);
+                }
+                else {
+                    return Err(format!("Let/Const: Unexpected token, expected Keyword, found {}", token).into());
+                }
+                token = self.lexer.next_token();
+            }
+            match token {
+                Token::Operator(Operator::Equals) => {
+                    let value = self.parse_expression()?;
+                    if let Some(ty) = ty {
+                        Ok(Declaration {
+                            name,
+                            ty,
+                            value
+                        })
+                    }
+                    else {
+                        let ty = value.infer_type();
+                        if let Some(ty) = ty {
+                            Ok(Declaration {
+                                name,
+                                ty,
+                                value
+                            })
+                        }
+                        else {
+                            Err(format!("Let/Const: Cannot infer type for variable {}, please add a type annotation", name).into())
+                        }
+                    }
+                }
+                Token::Semicolon => {
+                    if let Some(ty) = ty {
+                        Ok(Declaration {
+                            name,
+                            ty,
+                            value: None
+                        })
+                    }
+                    else {
+                        Err("Let/Const: Variable without initial value must be given a type annotation".into())
+                    }
+                }
+                _ => Err(format!("Let/Const: Unexpected token, expected '=' or ';', found {}", token).into())
+            }
+        }
+        else {
+            Err(format!("Let/Const: Unexpected token, expected Identifier, found {}", token).into())
+        }
     }
 
     pub fn parse_fn(&mut self) -> Result<Function, ParseError> {
+        Err("".into())
+    }
+
+    pub fn parse_expression(&mut self) -> Result<Expression, ParseError> {
         Err("".into())
     }
 }
