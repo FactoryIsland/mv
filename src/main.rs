@@ -6,6 +6,7 @@ use std::io::{Read, Write};
 use crate::script::assembly::assembler::assemble;
 use crate::script::assembly::linker::{AssemblyFile, link};
 use crate::script::compiler::lexer::Lexer;
+use crate::script::compiler::parser::Parser;
 use crate::script::run::run;
 
 fn main() {
@@ -21,9 +22,10 @@ fn test_compiler() {
 
     let lexer = Lexer::new(code);
 
-    for token in lexer {
-        println!("{:?}", token);
-    }
+    let parser = Parser::new(lexer);
+
+    let result = parser.parse();
+    println!("{:?}", result);
 }
 
 fn test_assembler() {
