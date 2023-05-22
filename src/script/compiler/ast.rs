@@ -34,14 +34,16 @@ pub enum TopLevelStatement {
 
 #[derive(Debug, Clone)]
 pub enum Statement {
-    Block(Block),
-    Expression(Expression),
-    Declaration(Declaration),
-    Assignment(Assignment),
-    If(IfStatement),
-    While(WhileStatement),
-    For(ForStatement),
-    Return(ReturnStatement)
+    Block(Block), // {
+    Expression(Expression), // ?
+    Declaration(Declaration), // let
+    Assignment(Assignment), // ?
+    Break, // break
+    Continue, // continue
+    If(IfStatement), // if
+    While(WhileStatement), // while
+    For(ForStatement), // for
+    Return(ReturnStatement) // return
 }
 
 #[derive(Debug, Clone)]
@@ -104,8 +106,8 @@ pub struct Assignment {
 #[derive(Debug, Clone)]
 pub struct IfStatement {
     pub condition: Expression,
-    pub then_branch: Box<Statement>,
-    pub else_branch: Option<Box<Statement>>,
+    pub body: Box<Statement>,
+    pub else_body: Option<Box<Statement>>,
 }
 
 #[derive(Debug, Clone)]
