@@ -4,6 +4,7 @@ use std::str::Chars;
 use std::fmt::Display;
 use std::collections::VecDeque;
 use phf::{Map, phf_map};
+use crate::script::compiler::parser::ParseError;
 use crate::script::utils::parse_char;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -171,6 +172,20 @@ impl Operator {
             Operator::Not |
             Operator::Minus => true,
             _ => false
+        }
+    }
+
+    pub fn precedence(&self) -> Result<u8, ParseError> {
+        match self {
+            Operator::Not => Ok(7),
+            Operator::Multiply | Operator::Divide | Operator::Modulo => Ok(6),
+            Operator::Plus | Operator::Minus => Ok(5),
+            Operator::LeftShift | Operator::LogicalRightShift | Operator::ArithmeticRightShift => Ok(4),
+            Operator::LessThan | Operator::GreaterThan | Operator::LessOrEqual | Operator::GreaterOrEqual => Ok(3),
+            Operator::Equal | Operator::NotEqual => Ok(2),
+            Operator::BitwiseAnd | Operator::BitwiseOr | Operator::Xor => Ok(1),
+            Operator::And | Operator::Or => Ok(0),
+            _ => Err(format!("Operator {} cannot appear in expression", self).into())
         }
     }
 }

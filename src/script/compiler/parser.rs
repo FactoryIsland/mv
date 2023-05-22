@@ -56,7 +56,7 @@ impl Parser {
         Ok(self.program)
     }
 
-    pub fn parse_element(&mut self, token: Token) -> Result<Element, ParseError> {
+    fn parse_element(&mut self, token: Token) -> Result<Element, ParseError> {
         if let Token::Keyword(keyword) = token {
             match keyword {
                 Keyword::Include => {
@@ -95,7 +95,7 @@ impl Parser {
         }
     }
 
-    pub fn parse_use(&mut self) -> Result<Vec<String>, ParseError> {
+    fn parse_use(&mut self) -> Result<Vec<String>, ParseError> {
         let mut res = Vec::new();
         let token = self.lexer.next_token();
         if let Token::Identifier(usage) = token {
@@ -124,7 +124,7 @@ impl Parser {
         Ok(res)
     }
 
-    pub fn parse_declaration(&mut self) -> Result<Declaration, ParseError> {
+    fn parse_declaration(&mut self) -> Result<Declaration, ParseError> {
         let token = self.lexer.next_token();
         if let Token::Identifier(name) = token {
             let mut ty = None;
@@ -187,7 +187,7 @@ impl Parser {
         }
     }
 
-    pub fn parse_fn(&mut self) -> Result<Function, ParseError> {
+    fn parse_fn(&mut self) -> Result<Function, ParseError> {
         let token = self.lexer.next_token();
         if let Token::Identifier(name) = token {
             let token = self.lexer.next_token();
@@ -261,7 +261,7 @@ impl Parser {
         }
     }
 
-    pub fn parse_statement(&mut self) -> Result<Statement, ParseError> {
+    fn parse_statement(&mut self) -> Result<Statement, ParseError> {
         let token = self.lexer.next_token();
         match token {
             Token::Keyword(word) => {
@@ -406,7 +406,80 @@ impl Parser {
         }
     }
 
-    pub fn parse_expression(&mut self) -> Result<Expression, ParseError> {
+    fn parse_expression(&mut self) -> Result<Expression, ParseError> {
         Ok(Expression::Literal(Literal::Null))
+    }
+
+    fn parse_expression_with_precedence(&mut self, min_precedence: u8) -> Result<Expression, ParseError> {
+        let mut lhs = self.parse_primary_expression()?;
+
+        while let Some((_, precedence, associativity)) = self.peek_operator_info() {
+            if precedence < min_precedence {
+                break;
+            }
+
+            self.consume_token(); // Consume the operator
+
+            let mut rhs = self.parse_primary_expression()?;
+            while let Some((_, next_precedence, _)) = self.peek_operator_info() {
+                if next_precedence > precedence || (associativity == Associativity::Right && next_precedence == precedence) {
+                    rhs = self.parse_expression_with_precedence(next_precedence)?;
+                } else {
+                    break;
+                }
+            }
+
+            lhs = Expression::Binary(BinaryExpression { left: Box::new(lhs), operator, right: Box::new(rhs) });
+        }
+
+        Ok(lhs)
+    }
+
+    fn parse_primary_expression(&mut self) -> Result<Expression, ParseError> {
+        let token = self.lexer.next_token();
+        match token {
+            Token::Operator(op) if op.is_pre_unary() => {
+                let operand = self.parse_expression()?;
+                Ok(Expression::Unary(UnaryExpression {
+                    operator: op,
+                    expr: Box::new(operand),
+                    post: false
+                }))
+            }
+            Token::Identifier(name) => {
+                let token = self.lexer.next_token();
+                match token {
+                    Token::LParen => {
+                        let arguments = self.parse_arguments()?;
+                        Ok(Expression::Call(CallExpression {
+                            function: name,
+                            arguments,
+                        }))
+                    }
+                    Token::LSquare => {
+                        let expr = self.parse_expression()?;
+                        Ok(Expression::Argument(Box::new(expr)))
+                    }
+                    _ => {
+                        self.lexer.revert(token);
+                        Ok(Expression::Identifier(name))
+                    }
+                }
+            }
+            Token::LParen => {
+                let expr = self.parse_expression()?;
+                let token = self.lexer.next_token();
+                if token != Token::RParen {
+                    return Err(format!("Expression: Unexpected token, expected ')', found {}", token).into());
+                }
+                Ok(expr)
+            }
+            Token::Literal(literal) => Ok(Expression::Literal(literal)),
+            _ => Err(format!("Expression: Unexpected token, expected Identifier, Literal, UnaryOperator or '(', found {}", token).into()),
+        }
+    }
+
+    fn parse_arguments(&mut self) -> Result<Vec<Expression>, ParseError> {
+        Err("".into())
     }
 }
