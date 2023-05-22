@@ -1,9 +1,9 @@
 include git;
 
 fn get_message() -> String {
-    //return "MVScript bytecode and assembly finished";
+    return "MVScript bytecode and assembly finished";
 }
 
 fn main() {
-    //git(null, get_message(), null);
+    git(null, get_message(), null);
 }

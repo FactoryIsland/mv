@@ -215,7 +215,7 @@ pub fn err(msg: String) {
 pub struct Lexer {
     ptr: *mut String,
     chars: Peekable<Chars<'static>>,
-    reverted: Option<Token>
+    reverted: VecDequeue<Token>
 }
 
 impl Lexer {
@@ -226,21 +226,18 @@ impl Lexer {
             Lexer {
                 chars: ptr.as_ref().unwrap().chars().peekable(),
                 ptr,
-                reverted: None
+                reverted: VecDequeue::new()
             }
         }
     }
 
     pub fn revert(&mut self, token: Token) {
-        if self.reverted.is_some() {
-            panic!("Lexer::revert() called more than once");
-        }
-        self.reverted = Some(token);
+        self.reverted.push_back(token);
     }
 
     pub fn next_token(&mut self) -> Token {
-        if let Some(token) = self.reverted.take() {
-            return token;
+        if !self.reverted.is_empty() {
+            return self.reverted.pop();
         }
         while let Some(ch) = self.chars.next() {
             match ch {
