@@ -149,7 +149,29 @@ pub enum Operator {
     Not,
     LeftShift,
     LogicalRightShift,
-    ArithmeticRightShift
+    ArithmeticRightShift,
+    Range
+}
+
+impl Operator {
+    pub fn is_unary(&self) -> bool {
+        match self {
+            Operator::PlusPlus |
+            Operator::MinusMinus |
+            Operator::Not => true,
+            _ => false
+        }
+    }
+
+    pub fn is_pre_unary(&self) -> bool {
+        match self {
+            Operator::PlusPlus |
+            Operator::MinusMinus |
+            Operator::Not |
+            Operator::Minus => true,
+            _ => false
+        }
+    }
 }
 
 impl Display for Operator {
@@ -178,6 +200,7 @@ impl Display for Operator {
             Operator::LeftShift => "<<",
             Operator::LogicalRightShift => ">>",
             Operator::ArithmeticRightShift => ">>>",
+            Operator::Range => ".."
         };
         f.write_str(s)
     }
@@ -355,7 +378,15 @@ impl Lexer {
                         '{' => Token::LCurly,
                         '}' => Token::RCurly,
                         ',' => Token::Comma,
-                        '.' => Token::Dot,
+                        '.' => {
+                            match self.chars.peek() {
+                                Some('.') => {
+                                    self.chars.next();
+                                    Token::Operator(Operator::Range)
+                                }
+                                _ => Token::Operator(Operator::Dot)
+                            }
+                        }
                         ':' => Token::Colon,
                         ';' => Token::Semicolon,
                         '-' => {

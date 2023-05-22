@@ -52,7 +52,10 @@ pub enum Expression {
     Literal(Literal),
     Identifier(String),
     Binary(BinaryExpression),
-    Call(CallExpression)
+    Unary(UnaryExpression),
+    Range(RangeExpression),
+    Call(CallExpression),
+    Argument(Box<Expression>)
 }
 
 impl Expression {
@@ -137,6 +140,19 @@ pub struct BinaryExpression {
     pub left: Box<Expression>,
     pub operator: Operator,
     pub right: Box<Expression>,
+}
+
+#[derive(Debug, Clone)]
+pub struct UnaryExpression {
+    pub expr: Box<Expression>,
+    pub operator: Operator,
+    pub post: bool
+}
+
+#[derive(Debug, Clone)]
+pub struct RangeExpression {
+    pub from: Option<Expression>,
+    pub to: Option<Expression>,
 }
 
 #[derive(Debug, Clone)]
