@@ -2,6 +2,7 @@ use std::alloc::{alloc, dealloc, Layout};
 use std::iter::Peekable;
 use std::str::Chars;
 use std::fmt::Display;
+use std::collections::VecDeque;
 use phf::{Map, phf_map};
 use crate::script::utils::parse_char;
 
@@ -238,7 +239,7 @@ pub fn err(msg: String) {
 pub struct Lexer {
     ptr: *mut String,
     chars: Peekable<Chars<'static>>,
-    reverted: VecDequeue<Token>
+    reverted: VecDeque<Token>
 }
 
 impl Lexer {
@@ -249,7 +250,7 @@ impl Lexer {
             Lexer {
                 chars: ptr.as_ref().unwrap().chars().peekable(),
                 ptr,
-                reverted: VecDequeue::new()
+                reverted: VecDeque::new()
             }
         }
     }
@@ -260,7 +261,7 @@ impl Lexer {
 
     pub fn next_token(&mut self) -> Token {
         if !self.reverted.is_empty() {
-            return self.reverted.pop();
+            return self.reverted.pop_front().unwrap();
         }
         while let Some(ch) = self.chars.next() {
             match ch {
@@ -384,7 +385,7 @@ impl Lexer {
                                     self.chars.next();
                                     Token::Operator(Operator::Range)
                                 }
-                                _ => Token::Operator(Operator::Dot)
+                                _ => Token::Dot
                             }
                         }
                         ':' => Token::Colon,

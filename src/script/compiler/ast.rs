@@ -151,8 +151,8 @@ pub struct UnaryExpression {
 
 #[derive(Debug, Clone)]
 pub struct RangeExpression {
-    pub from: Option<Expression>,
-    pub to: Option<Expression>,
+    pub from: Option<Box<Expression>>,
+    pub to: Option<Box<Expression>>,
 }
 
 #[derive(Debug, Clone)]
