@@ -64,7 +64,8 @@ pub enum Type {
     Float,
     Char,
     String,
-    Bool
+    Bool,
+    Void
 }
 
 impl TryFrom<Keyword> for Type {
@@ -129,8 +130,8 @@ pub struct ReturnStatement {
 pub struct Function {
     pub name: String,
     pub parameters: Vec<(String, Type)>,
-    pub return_type: Option<Type>,
-    pub body: Vec<Statement>,
+    pub return_type: Type,
+    pub body: Block,
 }
 
 #[derive(Debug, Clone)]

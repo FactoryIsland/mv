@@ -45,10 +45,13 @@ impl Parser {
         }
     }
 
-    pub fn parse(mut self) -> Result<Program, ParseError> {
+    pub fn parse(mut self) -> Result<Program, Program> {
         while let Some(token) = self.lexer.next() {
-            let element = self.parse_element(token)?;
-            self.program.push(element);
+            let element = self.parse_element(token);
+            if element.is_err() {
+                return Ok(self.program);
+            }
+            self.program.push(element.unwrap());
         }
         Ok(self.program)
     }
@@ -131,18 +134,18 @@ impl Parser {
                     ty = Some(Type::try_from(word)?);
                 }
                 else {
-                    return Err(format!("Let/Const: Unexpected token, expected Keyword, found {}", token).into());
+                    return Err(format!("Let/Const: Unexpected token, expected Type, found {}", token).into());
                 }
                 token = self.lexer.next_token();
             }
             match token {
-                Token::Operator(Operator::Equals) => {
+                Token::Operator(Operator::Assign) => {
                     let value = self.parse_expression()?;
                     if let Some(ty) = ty {
                         Ok(Declaration {
                             name,
                             ty,
-                            value
+                            value: Some(value),
                         })
                     }
                     else {
@@ -151,7 +154,7 @@ impl Parser {
                             Ok(Declaration {
                                 name,
                                 ty,
-                                value
+                                value: Some(value),
                             })
                         }
                         else {
@@ -180,10 +183,83 @@ impl Parser {
     }
 
     pub fn parse_fn(&mut self) -> Result<Function, ParseError> {
-        Err("".into())
+        let token = self.lexer.next_token();
+        if let Token::Identifier(name) = token {
+            let token = self.lexer.next_token();
+            if token != Token::LParen {
+                return Err(format!("Fn: Unexpected token, expected '(', found {}", token).into());
+            }
+            let mut parameters = Vec::new();
+            let mut token = self.lexer.next_token();
+            while token != Token::RParen {
+                if token == Token::Comma {
+                    token = self.lexer.next_token();
+                }
+                if let Token::Identifier(name) = token {
+                    let token = self.lexer.next_token();
+                    if token != Token::Colon {
+                        return Err(format!("Fn: Unexpected token, expected ':', found {}", token).into());
+                    }
+                    let token = self.lexer.next_token();
+                    if let Token::Keyword(word) = token {
+                        let ty = Type::try_from(word)?;
+                        parameters.push((name, ty));
+                    }
+                    else {
+                        return Err(format!("Let/Const: Unexpected token, expected Type, found {}", token).into());
+                    }
+                }
+                else {
+                    return Err(format!("Fn: Unexpected token, expected Identifier, found {}", token).into());
+                }
+                token = self.lexer.next_token();
+            }
+            let mut token = self.lexer.next_token();
+            let mut ty = Type::Void;
+            if let Token::Arrow = token {
+                token = self.lexer.next_token();
+                if let Token::Keyword(word) = token {
+                    ty = Type::try_from(word)?;
+                }
+                else if let Token::LParen = token {
+                    token = self.lexer.next_token();
+                    if token != Token::RParen {
+                        return Err(format!("Fn: Unexpected token, tuples are not supported, expected ')', found {}", token).into());
+                    }
+                }
+                else {
+                    return Err(format!("Fn: Unexpected token, expected Type, found {}", token).into());
+                }
+                token = self.lexer.next_token();
+            }
+            if token != Token::LCurly {
+                return Err(format!("Fn: Unexpected token, expected '{{', found {}", token).into());
+            }
+            let mut body = Vec::new();
+            token = self.lexer.next_token();
+            while token != Token::RCurly {
+                body.push(self.parse_statement(token)?);
+                token = self.lexer.next_token();
+            }
+            Ok(Function {
+                name,
+                parameters,
+                return_type: ty,
+                body: Block {
+                    statements: body
+                },
+            })
+        }
+        else {
+            return Err(format!("Fn: Unexpected token, expected Identifier, found {}", token).into());
+        }
     }
 
     pub fn parse_expression(&mut self) -> Result<Expression, ParseError> {
+        Err("".into())
+    }
+
+    pub fn parse_statement(&mut self, token: Token) -> Result<Statement, ParseError> {
         Err("".into())
     }
 }
