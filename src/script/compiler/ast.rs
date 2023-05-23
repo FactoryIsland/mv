@@ -60,11 +60,59 @@ pub enum Expression {
 
 impl Expression {
     pub fn infer_type(&self) -> Option<Type> {
-        None
+        match self {
+            Expression::Literal(literal) => {
+                match literal {
+                    Literal::Integer(_) => Some(Type::Int),
+                    Literal::Float(_) => Some(Type::Float),
+                    Literal::Char(_) => Some(Type::Char),
+                    Literal::String(_) => Some(Type::String),
+                    Literal::Bool(_) => Some(Type::Bool),
+                    Literal::Null => None
+                }
+            }
+            Expression::Binary(binary) => {
+                let a = binary.left.infer_type();
+                let b = binary.right.infer_type();
+                if a.is_none() {
+                    b
+                }
+                else if b.is_none() {
+                    a
+                }
+                else {
+                    let a = a.unwrap();
+                    let b = b.unwrap();
+                    if a == b {
+                        Some(a)
+                    }
+                    else if a == Type::String || b == Type::String {
+                        Some(Type::String)
+                    }
+                    else if a == Type::Bool || b == Type::Bool {
+                        Some(Type::Bool)
+                    }
+                    else if a == Type::Float || b == Type::Float {
+                        Some(Type::Float)
+                    }
+                    else {
+                        Some(a)
+                    }
+                }
+            }
+            Expression::Unary(unary) => {
+                unary.expr.infer_type()
+            }
+            Expression::Range(range) => {
+                None
+            }
+            Expression::Argument(_) => Some(Type::String),
+            _ => None
+        }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Int,
     Float,
