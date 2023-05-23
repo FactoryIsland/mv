@@ -47,11 +47,11 @@ impl Parser {
 
     pub fn parse(mut self) -> Result<Program, ParseError> {
         while let Some(token) = self.lexer.next() {
-            let element = self.parse_element(token);
-            if element.is_err() {
-                return Ok(self.program);
-            }
-            self.program.push(element.unwrap());
+            let element = self.parse_element(token)?;
+            //if element.is_err() {
+            //    return Ok(self.program);
+            //}
+            self.program.push(element);
         }
         Ok(self.program)
     }
@@ -316,9 +316,17 @@ impl Parser {
                         }
                     }
                     Keyword::Break => {
+                        let token = self.lexer.next_token();
+                        if token != Token::Semicolon {
+                            return Err(format!("Break: Unexpected token, expected ';', found {}", token).into());
+                        }
                         Ok(Statement::Break)
                     }
                     Keyword::Continue => {
+                        let token = self.lexer.next_token();
+                        if token != Token::Semicolon {
+                            return Err(format!("Continue: Unexpected token, expected ';', found {}", token).into());
+                        }
                         Ok(Statement::Continue)
                     }
                     Keyword::Return => {
@@ -337,7 +345,7 @@ impl Parser {
                         }
                     }
                     _ => {
-                        return Err(format!("Statement: Unexpected token for statement, found {}", word).into());
+                        return Err(format!("Statement: Unexpected keyword, found {}", word).into());
                     }
                 }
             }
@@ -383,8 +391,8 @@ impl Parser {
                     }))
                 }
                 else {
-                    self.lexer.revert(next);
                     self.lexer.revert(Token::Identifier(name));
+                    self.lexer.revert(next);
                     let expr = self.parse_expression()?;
                     let token = self.lexer.next_token();
                     if token != Token::Semicolon {
@@ -407,30 +415,61 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Result<Expression, ParseError> {
-        Ok(Expression::Literal(Literal::Null))
+        self.parse_expression_with_precedence(0)
     }
 
     fn parse_expression_with_precedence(&mut self, min_precedence: u8) -> Result<Expression, ParseError> {
         let mut lhs = self.parse_primary_expression()?;
+        let mut token = self.lexer.next_token();
+        while let Token::Operator(op) = token {
+            if op.is_post_unary() {
+                lhs = Expression::Unary(UnaryExpression {
+                    operator: op,
+                    expr: Box::new(lhs),
+                    post: true
+                });
+                token = self.lexer.next_token();
+                continue;
+            }
 
-        while let Some((_, precedence, associativity)) = self.peek_operator_info() {
+            let precedence = op.precedence()?;
+
             if precedence < min_precedence {
+                token = Token::Operator(op);
                 break;
             }
 
-            self.consume_token(); // Consume the operator
-
             let mut rhs = self.parse_primary_expression()?;
-            while let Some((_, next_precedence, _)) = self.peek_operator_info() {
-                if next_precedence > precedence || (associativity == Associativity::Right && next_precedence == precedence) {
-                    rhs = self.parse_expression_with_precedence(next_precedence)?;
-                } else {
+
+            let mut inner_token = self.lexer.next_token();
+            while let Token::Operator(inner_op) = inner_token {
+                if inner_op.is_post_unary() {
+                    rhs = Expression::Unary(UnaryExpression {
+                        operator: inner_op,
+                        expr: Box::new(rhs),
+                        post: true
+                    });
+                    inner_token = self.lexer.next_token();
+                    continue;
+                }
+
+                let inner_precedence = inner_op.precedence()?;
+
+                if inner_precedence < precedence {
+                    self.lexer.revert(Token::Operator(inner_op));
                     break;
                 }
+                rhs = self.parse_expression_with_precedence(inner_precedence)?;
+                inner_token = self.lexer.next_token();
             }
-
-            lhs = Expression::Binary(BinaryExpression { left: Box::new(lhs), operator, right: Box::new(rhs) });
+            lhs = Expression::Binary(BinaryExpression {
+                left: Box::new(lhs),
+                operator: op,
+                right: Box::new(rhs)
+            });
+            token = self.lexer.next_token();
         }
+        self.lexer.revert(token);
 
         Ok(lhs)
     }
@@ -480,6 +519,19 @@ impl Parser {
     }
 
     fn parse_arguments(&mut self) -> Result<Vec<Expression>, ParseError> {
-        Err("".into())
+        let mut arguments = Vec::new();
+        let mut token = self.lexer.next_token();
+        loop {
+            match token {
+                Token::Comma => {}
+                Token::RParen => return Ok(arguments),
+                _ => {
+                    self.lexer.revert(token);
+                    let expr = self.parse_expression()?;
+                    arguments.push(expr);
+                }
+            }
+            token = self.lexer.next_token();
+        }
     }
 }

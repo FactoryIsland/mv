@@ -156,11 +156,10 @@ pub enum Operator {
 }
 
 impl Operator {
-    pub fn is_unary(&self) -> bool {
+    pub fn is_post_unary(&self) -> bool {
         match self {
             Operator::PlusPlus |
-            Operator::MinusMinus |
-            Operator::Not => true,
+            Operator::MinusMinus => true,
             _ => false
         }
     }
