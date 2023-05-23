@@ -1,7 +1,3 @@
 .named
 @main
-    mov index 0
-    print %$index
-    inc index
-    print %$index
     ret

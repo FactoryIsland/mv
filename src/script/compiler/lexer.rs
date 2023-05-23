@@ -130,9 +130,7 @@ static KEYWORDS: Map<&'static str, Keyword> = phf_map! {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Operator {
     Plus,
-    PlusPlus,
     Minus,
-    MinusMinus,
     Multiply,
     Divide,
     Modulo,
@@ -151,23 +149,12 @@ pub enum Operator {
     Not,
     LeftShift,
     LogicalRightShift,
-    ArithmeticRightShift,
-    Range
+    ArithmeticRightShift
 }
 
 impl Operator {
-    pub fn is_post_unary(&self) -> bool {
+    pub fn is_unary(&self) -> bool {
         match self {
-            Operator::PlusPlus |
-            Operator::MinusMinus => true,
-            _ => false
-        }
-    }
-
-    pub fn is_pre_unary(&self) -> bool {
-        match self {
-            Operator::PlusPlus |
-            Operator::MinusMinus |
             Operator::Not |
             Operator::Minus => true,
             _ => false
@@ -193,9 +180,7 @@ impl Display for Operator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
             Operator::Plus => "+",
-            Operator::PlusPlus => "++",
             Operator::Minus => "-",
-            Operator::MinusMinus => "--",
             Operator::Multiply => "*",
             Operator::Divide => "/",
             Operator::Modulo => "%",
@@ -214,8 +199,7 @@ impl Display for Operator {
             Operator::Not => "!",
             Operator::LeftShift => "<<",
             Operator::LogicalRightShift => ">>",
-            Operator::ArithmeticRightShift => ">>>",
-            Operator::Range => ".."
+            Operator::ArithmeticRightShift => ">>>"
         };
         f.write_str(s)
     }
@@ -393,15 +377,7 @@ impl Lexer {
                         '{' => Token::LCurly,
                         '}' => Token::RCurly,
                         ',' => Token::Comma,
-                        '.' => {
-                            match self.chars.peek() {
-                                Some('.') => {
-                                    self.chars.next();
-                                    Token::Operator(Operator::Range)
-                                }
-                                _ => Token::Dot
-                            }
-                        }
+                        '.' => Token::Dot,
                         ':' => Token::Colon,
                         ';' => Token::Semicolon,
                         '-' => {
@@ -409,10 +385,6 @@ impl Lexer {
                                 Some('>') => {
                                     self.chars.next();
                                     Token::Arrow
-                                }
-                                Some('-') => {
-                                    self.chars.next();
-                                    Token::Operator(Operator::MinusMinus)
                                 }
                                 _ => Token::Operator(Operator::Minus)
                             }
@@ -432,10 +404,6 @@ impl Lexer {
                         }
                         '+' => {
                             match self.chars.peek() {
-                                Some('+') => {
-                                    self.chars.next();
-                                    Token::Operator(Operator::PlusPlus)
-                                }
                                 Some('=') => {
                                     self.chars.next();
                                     Token::OperatorAssign(Operator::Plus)

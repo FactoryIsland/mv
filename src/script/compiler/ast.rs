@@ -3,7 +3,7 @@ use crate::script::compiler::parser::*;
 
 #[derive(Debug, Clone)]
 pub struct Program {
-    elements: Vec<Element>,
+    pub elements: Vec<Element>,
 }
 
 impl Program {
@@ -102,9 +102,9 @@ impl Expression {
             Expression::Unary(unary) => {
                 unary.expr.infer_type()
             }
-            Expression::Range(range) => {
-                None
-            }
+            //Expression::Range(range) => {
+            //    None
+            //}
             Expression::Argument(_) => Some(Type::String),
             _ => None
         }
@@ -192,8 +192,7 @@ pub struct BinaryExpression {
 #[derive(Debug, Clone)]
 pub struct UnaryExpression {
     pub expr: Box<Expression>,
-    pub operator: Operator,
-    pub post: bool
+    pub operator: Operator
 }
 
 #[derive(Debug, Clone)]

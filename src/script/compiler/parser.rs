@@ -422,16 +422,6 @@ impl Parser {
         let mut lhs = self.parse_primary_expression()?;
         let mut token = self.lexer.next_token();
         while let Token::Operator(op) = token {
-            if op.is_post_unary() {
-                lhs = Expression::Unary(UnaryExpression {
-                    operator: op,
-                    expr: Box::new(lhs),
-                    post: true
-                });
-                token = self.lexer.next_token();
-                continue;
-            }
-
             let precedence = op.precedence()?;
 
             if precedence < min_precedence {
@@ -443,16 +433,6 @@ impl Parser {
 
             let mut inner_token = self.lexer.next_token();
             while let Token::Operator(inner_op) = inner_token {
-                if inner_op.is_post_unary() {
-                    rhs = Expression::Unary(UnaryExpression {
-                        operator: inner_op,
-                        expr: Box::new(rhs),
-                        post: true
-                    });
-                    inner_token = self.lexer.next_token();
-                    continue;
-                }
-
                 let inner_precedence = inner_op.precedence()?;
 
                 if inner_precedence < precedence {
@@ -497,12 +477,11 @@ impl Parser {
                 }
                 Ok(Expression::Argument(Box::new(expr)))
             }
-            Token::Operator(op) if op.is_pre_unary() => {
+            Token::Operator(op) if op.is_unary() => {
                 let operand = self.parse_expression()?;
                 Ok(Expression::Unary(UnaryExpression {
                     operator: op,
-                    expr: Box::new(operand),
-                    post: false
+                    expr: Box::new(operand)
                 }))
             }
             Token::Identifier(name) => {

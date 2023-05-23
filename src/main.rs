@@ -5,6 +5,7 @@ use std::fs::OpenOptions;
 use std::io::{Read, Write};
 use crate::script::assembly::assembler::assemble;
 use crate::script::assembly::linker::{AssemblyFile, link};
+use crate::script::compiler::codegen::Generator;
 use crate::script::compiler::lexer::Lexer;
 use crate::script::compiler::parser::Parser;
 use crate::script::run::run;
@@ -25,7 +26,39 @@ fn test_compiler() {
     let parser = Parser::new(lexer);
 
     let result = parser.parse();
-    println!("{:?}", result);
+
+    if let Err(e) = result {
+        println!("{:?}", e);
+        return;
+    }
+    let result = result.unwrap();
+
+    let generator = Generator::new(result);
+
+    let script = generator.generate();
+
+    println!("{}", script);
+
+    let script = AssemblyFile {
+        name: "script.mvs".to_string(),
+        code: script
+    };
+
+    let mut file = OpenOptions::new().read(true).open("masm/git.masm").unwrap();
+    let mut git = String::new();
+    file.read_to_string(&mut git).unwrap();
+
+    let lib = AssemblyFile {
+        name: "git".to_string(),
+        code: git
+    };
+
+    let linked = link(vec![script, lib]);
+
+    let bytecode = assemble(linked);
+    let mut file = OpenOptions::new().create(true).write(true).truncate(true).open("out.mv").unwrap();
+    file.write_all(&bytecode).unwrap();
+    run(&bytecode, vec![]);
 }
 
 fn test_assembler() {

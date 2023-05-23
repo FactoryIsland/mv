@@ -65,7 +65,7 @@ fn push_str_var(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             }
             else {
                 buffer.push_u8(0);
-                buffer.push_u16(token.parse::<u16>().unwrap());
+                buffer.push_u16(str.parse::<u16>().unwrap());
                 offset += 3;
             }
         }
@@ -90,6 +90,7 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
             5
         }
         ARGUMENT => {
+            buffer.push_u8(ARGUMENT as u8);
             let str = token.split_at(1).1;
             if str.starts_with([VARIABLE, REFERENCE, DEREF]) {
                 buffer.push_u8(VARIABLE as u8);
@@ -99,7 +100,7 @@ fn push_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String, u3
             }
             else {
                 buffer.push_u8(0);
-                buffer.push_u16(token.parse::<u16>().unwrap());
+                buffer.push_u16(str.parse::<u16>().unwrap());
                 3
             }
         }
@@ -156,6 +157,7 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
         }
         ARGUMENT => {
             let str = token.split_at(1).1;
+            buffer.push_u8(ARGUMENT as u8);
             if str.starts_with([VARIABLE, REFERENCE, DEREF]) {
                 buffer.push_u8(VARIABLE as u8);
                 let str = str.split_at(1).1;
@@ -164,7 +166,7 @@ fn push_prim_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<Strin
             }
             else {
                 buffer.push_u8(0);
-                buffer.push_u16(token.parse::<u16>().unwrap());
+                buffer.push_u16(str.parse::<u16>().unwrap());
                 3
             }
         }
@@ -220,6 +222,7 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             5
         }
         ARGUMENT => {
+            buffer.push_u8(ARGUMENT as u8);
             let str = token.split_at(1).1;
             if str.starts_with([VARIABLE, REFERENCE, DEREF]) {
                 buffer.push_u8(VARIABLE as u8);
@@ -229,7 +232,7 @@ fn push_num_val(buffer: &mut ByteBuffer, token: &str, names: &mut HashMap<String
             }
             else {
                 buffer.push_u8(0);
-                buffer.push_u16(token.parse::<u16>().unwrap());
+                buffer.push_u16(str.parse::<u16>().unwrap());
                 3
             }
         }
