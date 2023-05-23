@@ -1,9 +1,15 @@
-include git;
+//include git;
+//
+//fn get_message() -> String {
+//    return "MVScript bytecode and assembly finished";
+//}
+//
+//fn main() {
+//    git(null, get_message(), null);
+//}
 
-fn get_message() -> String {
-    return "MVScript bytecode and assembly finished";
-}
-
-fn main() {
-    git(null, get_message(), null);
+fn a() {
+    let x: int = 10;
+    let y: String = "Hello";
+    let z: int = ;
 }

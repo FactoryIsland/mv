@@ -457,11 +457,19 @@ impl Parser {
 
                 if inner_precedence < precedence {
                     self.lexer.revert(Token::Operator(inner_op));
+                    inner_token = self.lexer.next_token();
                     break;
                 }
-                rhs = self.parse_expression_with_precedence(inner_precedence)?;
+
+                let extra = self.parse_expression_with_precedence(inner_precedence)?;
+                rhs = Expression::Binary(BinaryExpression {
+                    left: Box::new(rhs),
+                    operator: inner_op,
+                    right: Box::new(extra)
+                });
                 inner_token = self.lexer.next_token();
             }
+            self.lexer.revert(inner_token);
             lhs = Expression::Binary(BinaryExpression {
                 left: Box::new(lhs),
                 operator: op,
