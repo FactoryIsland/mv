@@ -485,6 +485,18 @@ impl Parser {
     fn parse_primary_expression(&mut self) -> Result<Expression, ParseError> {
         let token = self.lexer.next_token();
         match token {
+            Token::Keyword(word) if word == Keyword::Args => {
+                let token = self.lexer.next_token();
+                if token != Token::LSquare {
+                    return Err(format!("Args: Unexpected token, expected '[', found {}", token).into());
+                }
+                let expr = self.parse_expression()?;
+                let token = self.lexer.next_token();
+                if token!= Token::RSquare {
+                    return Err(format!("Args: Unexpected token, expected ']', found {}", token).into());
+                }
+                Ok(Expression::Argument(Box::new(expr)))
+            }
             Token::Operator(op) if op.is_pre_unary() => {
                 let operand = self.parse_expression()?;
                 Ok(Expression::Unary(UnaryExpression {
@@ -503,10 +515,6 @@ impl Parser {
                             arguments,
                         }))
                     }
-                    Token::LSquare => {
-                        let expr = self.parse_expression()?;
-                        Ok(Expression::Argument(Box::new(expr)))
-                    }
                     _ => {
                         self.lexer.revert(token);
                         Ok(Expression::Identifier(name))
@@ -522,7 +530,7 @@ impl Parser {
                 Ok(expr)
             }
             Token::Literal(literal) => Ok(Expression::Literal(literal)),
-            _ => Err(format!("Expression: Unexpected token, expected Identifier, Literal, UnaryOperator or '(', found {}", token).into()),
+            _ => Err(format!("Expression: Unexpected token, expected Identifier, Literal, UnaryOperator, args or '(', found {}", token).into()),
         }
     }
 

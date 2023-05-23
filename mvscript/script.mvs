@@ -9,7 +9,5 @@
 //}
 
 fn a() {
-    let x: int = 10;
-    let y: String = "Hello";
-    let z: int = ;
+    let x: String = args[0];
 }
