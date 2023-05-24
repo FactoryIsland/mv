@@ -1,7 +1,7 @@
 include git;
 
 fn get_message() -> String {
-    return "MVScript compiler basics finished!";
+    return "If statements work!";
 }
 
 fn main() {

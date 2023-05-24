@@ -102,11 +102,29 @@ impl Expression {
             Expression::Unary(unary) => {
                 unary.expr.infer_type()
             }
-            //Expression::Range(range) => {
-            //    None
-            //}
             Expression::Argument(_) => Some(Type::String),
             _ => None
+        }
+    }
+
+    pub fn is_null(&self) -> bool {
+        if let Expression::Literal(Literal::Null) = self {
+            true
+        }
+        else {
+            false
+        }
+    }
+
+    pub fn is_zero(&self) -> bool {
+        if let Expression::Literal(Literal::Integer(i)) = self {
+            *i == 0
+        }
+        else if let Expression::Literal(Literal::Float(f)) = self {
+            *f == 0.0
+        }
+        else {
+            false
         }
     }
 }

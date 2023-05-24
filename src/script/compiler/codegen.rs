@@ -14,7 +14,7 @@ impl Generator {
         let mut data = StaticData {
             preload_name: "static".to_string(),
             preload_code: String::new(),
-            next_label: "L0".to_string(),
+            next_label: String::new(),
             label_stack: Vec::new()
         };
 
@@ -45,14 +45,23 @@ pub struct StaticData {
 }
 
 impl StaticData {
-    pub fn next_label(&mut self) {
-        let label = self.next_label.split_at(1).1;
-        self.next_label = format!("L{}", label.parse::<u32>().unwrap() + 1);
+    pub fn next_label(&mut self) -> String {
+        if self.next_label.is_empty() {
+            self.next_label = "L0".to_string();
+        }
+        else {
+            let label = self.next_label.split_at(1).1;
+            self.next_label = format!("L{}", label.parse::<u32>().unwrap() + 1);
+        }
+        self.next_label.clone()
     }
 }
 
-pub trait Codegen {
+pub trait Codegen: Sized {
     fn codegen(self, data: &mut StaticData) -> String;
+    fn codegen_conditional(self, data: &mut StaticData, true_label: &str, false_label: &str) -> String {
+        panic!("This element doesn't support conditional code generation");
+    }
 }
 
 impl Codegen for Program {
@@ -84,7 +93,7 @@ impl Codegen for TopLevelStatement {
                 if let Some(v) = d.value {
                     let load = v.codegen(data);
                     data.preload_code.push_str(&load);
-                    data.preload_code.push_str(&format!("mov {} $_tmp\n", d.name));
+                    data.preload_code.push_str(&format!("cpy {} $_tmp\n", d.name));
                 }
                 code
             },
@@ -135,17 +144,17 @@ impl Codegen for Statement {
                 let mut code = String::new();
                 if let Some(v) = d.value {
                     code.push_str(&v.codegen(data));
-                    code.push_str(&format!("mov {} $_tmp", d.name));
+                    code.push_str(&format!("cpy {} $_tmp", d.name));
                 }
                 else {
-                    code.push_str(&format!("mov {} null", d.name));
+                    code.push_str(&format!("cpy {} null", d.name));
                 }
                 code
             },
             Statement::Assignment(a) => {
                 let mut code = String::new();
                 code.push_str(&a.value.codegen(data));
-                code.push_str(format!("mov {} $_tmp\n", a.name).as_str());
+                code.push_str(format!("cpy {} $_tmp\n", a.name).as_str());
                 code
             },
             Statement::Break => {
@@ -176,7 +185,13 @@ impl Codegen for Statement {
 
 impl Codegen for IfStatement {
     fn codegen(self, data: &mut StaticData) -> String {
-        String::new()
+        let true_label = data.next_label();
+        let false_label = data.next_label();
+        let after_label = data.next_label();
+        let cond = self.condition.codegen_conditional(data, &true_label, &false_label);
+        let block = self.body.codegen(data);
+        let else_block = self.else_body.map(|e| e.codegen(data)).unwrap_or(String::new());
+        format!("{}.{}:\n{}jmp {}\n.{}:\n{}.{}:\n", cond, true_label, block, after_label, false_label, else_block, after_label)
     }
 }
 
@@ -196,7 +211,7 @@ impl Codegen for Expression {
     fn codegen(self, data: &mut StaticData) -> String {
         match self {
             Expression::Literal(l) => {
-                format!("mov _tmp {}\n", match l {
+                format!("cpy _tmp {}\n", match l {
                     Literal::Integer(i) => i.to_string(),
                     Literal::Float(f) => f.to_string(),
                     Literal::Char(c) => format!("'{}'", c),
@@ -205,11 +220,11 @@ impl Codegen for Expression {
                     Literal::Null => "null".to_string()
                 })
             }
-            Expression::Identifier(i) => format!("mov _tmp ${}\n", i),
+            Expression::Identifier(i) => format!("cpy _tmp ${}\n", i),
             Expression::Binary(b) => {
                 let mut code = String::new();
                 code.push_str(&b.right.codegen(data));
-                code.push_str("mov _tmp2 $_tmp\n");
+                code.push_str("cpy _tmp2 $_tmp\n");
                 code.push_str(&b.left.codegen(data));
                 code.push_str(&format!("{} _tmp $_tmp2\n", match b.operator {
                     Operator::Plus => "add",
@@ -217,21 +232,13 @@ impl Codegen for Expression {
                     Operator::Multiply => "mul",
                     Operator::Divide => "div",
                     Operator::Modulo => "mod",
-                    //Operator::Equal => {}
-                    //Operator::NotEqual => {}
-                    //Operator::LessThan => {}
-                    //Operator::GreaterThan => {}
-                    //Operator::LessOrEqual => {}
-                    //Operator::GreaterOrEqual => {}
-                    //Operator::And => {}
                     Operator::BitwiseAnd => "and",
-                    //Operator::Or => {}
                     Operator::BitwiseOr => "or",
                     Operator::Xor => "xor",
                     Operator::LeftShift => "shl",
                     Operator::LogicalRightShift => "shr",
                     Operator::ArithmeticRightShift => "sar",
-                    _ => panic!("Operator {} not supported or not implemented yet!", b.operator)
+                    _ => panic!("Operator {} not supported or not implemented for non-conditional codegen!", b.operator)
                 }));
                 code
             }
@@ -248,20 +255,114 @@ impl Codegen for Expression {
             Expression::Call(mut c) => {
                 let mut code = String::new();
                 c.arguments.reverse();
-                for arg in c.arguments {
-                    code.push_str(&arg.codegen(data));
-                    code.push_str("push $_tmp\n");
+                if c.function == "print" || c.function == "sh" {
+                    if c.arguments.len() != 1 {
+                        panic!("Illegal number of arguments for builtin {}!", c.function);
+                    }
+                    code.push_str(&c.arguments.pop().unwrap().codegen(data));
+                    code.push_str(&format!("{} $_tmp\n", c.function));                }
+                else {
+                    for arg in c.arguments {
+                        code.push_str(&arg.codegen(data));
+                        code.push_str("push $_tmp\n");
+                    }
+                    code.push_str(&format!("call {}\n", c.function));
+                    code.push_str("pop_ret _tmp\n");
                 }
-                code.push_str(&format!("call {}\n", c.function));
-                code.push_str("pop_ret _tmp\n");
                 code
             }
             Expression::Argument(a) => {
                 let mut code = String::new();
                 code.push_str(&a.codegen(data));
-                code.push_str("mov _tmp %$_tmp\n");
+                code.push_str("cpy _tmp %$_tmp\n");
                 code
             }
+        }
+    }
+
+    fn codegen_conditional(self, data: &mut StaticData, true_label: &str, false_label: &str) -> String {
+        match self {
+            Expression::Literal(l) => {
+                match l {
+                    Literal::Integer(i) => format!("jnz {} {}\njmp {}\n", i, true_label, false_label),
+                    Literal::Float(f) => format!("jnz {} {}\njmp {}\n", f, true_label, false_label),
+                    Literal::Char(c) => format!("jnz {} {}\njmp {}\n", c, true_label, false_label),
+                    Literal::String(s) => format!("cmp {} #\"\"\njne {}\n jmp {}\n", s, true_label, false_label),
+                    Literal::Bool(b) => format!("cmp {} true\nje {}\njne {}\n", b, true_label, false_label),
+                    Literal::Null => format!("jmp {}\n", false_label),
+                }
+            }
+            Expression::Identifier(i) => format!("cmp ${} true\n je {}\n, jmp {}\n", i, true_label, false_label),
+            Expression::Binary(b) => {
+                if b.operator == Operator::And {
+                    let and_true_label = data.next_label();
+                    let left_code = b.left.codegen_conditional(data, &and_true_label, false_label);
+                    let right_code = b.right.codegen_conditional(data, true_label, false_label);
+                    format!("{}\n.{}:\n{}\n", left_code, and_true_label, right_code)
+                }
+                else if b.operator == Operator::Or {
+                    let or_false_label = data.next_label();
+                    let left_code = b.left.codegen_conditional(data, true_label, &or_false_label);
+                    let right_code = b.right.codegen_conditional(data, true_label, false_label);
+                    format!("{}\n.{}:\n{}\n", left_code, or_false_label, right_code)
+                }
+                else {
+                    let mut code = String::new();
+                    if b.operator == Operator::Equal || b.operator == Operator::NotEqual {
+                        let n = if b.operator == Operator::Equal { "" } else { "n" };
+                        if b.left.is_null() || b.left.is_zero() {
+                            code.push_str(&b.right.codegen(data));
+                            code.push_str(&format!("j{}{} $_tmp {}\njmp {}\n", n, if b.left.is_null() { "n" } else { "z" }, true_label, false_label));
+                        }
+                        else if b.right.is_null() || b.right.is_zero() {
+                            code.push_str(&b.left.codegen(data));
+                            code.push_str(&format!("j{}{} $_tmp {}\njmp {}\n", n, if b.right.is_null() { "n" } else { "z" }, true_label, false_label));
+                        }
+                        return code;
+                    }
+                    code.push_str(&b.right.codegen(data));
+                    code.push_str("cpy _tmp2 $_tmp\n");
+                    code.push_str(&b.left.codegen(data));
+                    code.push_str("cmp $_tmp2 $_tmp\n");
+                    code.push_str(&format!("{} {}\n", match b.operator {
+                        Operator::Equal => "je",
+                        Operator::NotEqual => "jne",
+                        Operator::LessThan => "jl",
+                        Operator::GreaterThan => "jg",
+                        Operator::LessOrEqual => "jle",
+                        Operator::GreaterOrEqual => "jge",
+                        _ => panic!("Operator {} not supported for conditional codegen!", b.operator)
+                    }, true_label));
+                    code.push_str(&format!("jmp {}\n", false_label));
+                    code
+                }
+            }
+            Expression::Unary(u) => {
+                if u.operator != Operator::Not {
+                    panic!("Illegal unary operator for conditional codegen!");
+                }
+                u.expr.codegen_conditional(data, false_label, true_label)
+            }
+            Expression::Call(mut c) => {
+                let mut code = String::new();
+                c.arguments.reverse();
+                if c.function == "print" || c.function == "sh" {
+                    panic!("Builtin function does not return a boolean value!");
+                }
+                else {
+                    for arg in c.arguments {
+                        code.push_str(&arg.codegen(data));
+                        code.push_str("push $_tmp\n");
+                    }
+                    code.push_str(&format!("call {}\n", c.function));
+                    code.push_str("pop_ret _tmp\n");
+                }
+                code.push_str("cmp $_tmp true\n");
+                code.push_str(&format!("je {}\n", true_label));
+                code.push_str(&format!("jmp {}\n", false_label));
+                code
+            }
+            _ => panic!("This expression is not supported for conditional codegen!")
         }
     }
 }

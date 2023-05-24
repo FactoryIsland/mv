@@ -40,20 +40,47 @@ fn test_compiler() {
     println!("{}", script);
 
     let script = AssemblyFile {
-        name: "script.mvs".to_string(),
+        name: "script".to_string(),
         code: script
     };
 
-    let mut file = OpenOptions::new().read(true).open("masm/git.masm").unwrap();
-    let mut git = String::new();
-    file.read_to_string(&mut git).unwrap();
+    let mut file = OpenOptions::new().read(true).open("mvscript/git.mvs").unwrap();
+    let mut code = String::new();
+    file.read_to_string(&mut code).unwrap();
 
-    let lib = AssemblyFile {
+    let lexer = Lexer::new(code);
+
+    let parser = Parser::new(lexer);
+
+    let result = parser.parse();
+
+    if let Err(e) = result {
+        println!("{:?}", e);
+        return;
+    }
+    let result = result.unwrap();
+
+    let generator = Generator::new(result);
+
+    let git = generator.generate();
+
+    println!("{}", git);
+
+    let git = AssemblyFile {
         name: "git".to_string(),
         code: git
     };
 
-    let linked = link(vec![script, lib]);
+    //let mut file = OpenOptions::new().read(true).open("masm/git.masm").unwrap();
+    //let mut git = String::new();
+    //file.read_to_string(&mut git).unwrap();
+
+    //let lib = AssemblyFile {
+    //    name: "git".to_string(),
+    //    code: git
+    //};
+
+    let linked = link(vec![script, git]);
 
     let bytecode = assemble(linked);
     let mut file = OpenOptions::new().create(true).write(true).truncate(true).open("out.mv").unwrap();

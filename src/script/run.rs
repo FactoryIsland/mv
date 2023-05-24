@@ -290,7 +290,7 @@ pub fn run(code: &[u8], args: Vec<String>) {
                     if variables.len() <= id {
                         err("Setting a pointer variable must require the variable to already exist!".to_string());
                     }
-                    let variable = parse_variable(&mut buffer, &mut variables, &args, true);
+                    let variable = parse_variable(&mut buffer, &mut variables, &args, false);
                     variables[id].set_reference(variable);
                 }
                 else {
