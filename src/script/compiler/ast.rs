@@ -187,9 +187,10 @@ pub struct WhileStatement {
 
 #[derive(Debug, Clone)]
 pub struct ForStatement {
-    pub variable: String,
-    pub iterable: Expression,
-    pub body: Box<Statement>,
+    pub init: Box<Statement>,
+    pub condition: Expression,
+    pub next: Box<Statement>,
+    pub body: Box<Statement>
 }
 
 #[derive(Debug, Clone)]

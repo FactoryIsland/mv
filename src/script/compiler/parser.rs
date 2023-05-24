@@ -76,7 +76,7 @@ impl Parser {
                 },
                 Keyword::Use => Ok(Element::Statement(TopLevelStatement::Use(self.parse_use()?))),
                 Keyword::Const => {
-                    let declaration = self.parse_declaration()?;
+                    let declaration = self.parse_declaration(true)?;
                     if declaration.value.is_none() {
                         Err("Const: Must have a value".into())
                     }
@@ -85,7 +85,7 @@ impl Parser {
                         Ok(Element::Empty)
                     }
                 },
-                Keyword::Let => Ok(Element::Statement(TopLevelStatement::Declaration(self.parse_declaration()?))),
+                Keyword::Let => Ok(Element::Statement(TopLevelStatement::Declaration(self.parse_declaration(true)?))),
                 Keyword::Fn => Ok(Element::Function(self.parse_fn()?)),
                 _ => Err(format!("File: Unexpected keyword, expected 'include' | 'use' | 'const' | 'let' | 'fn', found {}", keyword).into())
             }
@@ -124,7 +124,7 @@ impl Parser {
         Ok(res)
     }
 
-    fn parse_declaration(&mut self) -> Result<Declaration, ParseError> {
+    fn parse_declaration(&mut self, semi: bool) -> Result<Declaration, ParseError> {
         let token = self.lexer.next_token();
         if let Token::Identifier(name) = token {
             let mut ty = None;
@@ -142,9 +142,11 @@ impl Parser {
             match token {
                 Token::Operator(Operator::Assign) => {
                     let value = self.parse_expression()?;
-                    let token = self.lexer.next_token();
-                    if token != Token::Semicolon {
-                        return Err(format!("Let/Const: Unexpected token, expected ';', found {}", token).into());
+                    if semi {
+                        let token = self.lexer.next_token();
+                        if token != Token::Semicolon {
+                            return Err(format!("Let/Const: Unexpected token, expected ';', found {}", token).into());
+                        }
                     }
                     if let Some(ty) = ty {
                         Ok(Declaration {
@@ -244,7 +246,7 @@ impl Parser {
             token = self.lexer.next_token();
             while token != Token::RCurly {
                 self.lexer.revert(token);
-                body.push(self.parse_statement()?);
+                body.push(self.parse_statement(true)?);
                 token = self.lexer.next_token();
             }
             Ok(Function {
@@ -261,18 +263,21 @@ impl Parser {
         }
     }
 
-    fn parse_statement(&mut self) -> Result<Statement, ParseError> {
+    fn parse_statement(&mut self, semi: bool) -> Result<Statement, ParseError> {
         let token = self.lexer.next_token();
         match token {
             Token::Keyword(word) => {
                 match word {
-                    Keyword::Let => Ok(Statement::Declaration(self.parse_declaration()?)),
+                    Keyword::Let => Ok(Statement::Declaration(self.parse_declaration(semi)?)),
                     Keyword::If => {
+                        if !semi {
+                            return Err("If cannot be used inside a for initialization or next component!".into());
+                        }
                         let condition = self.parse_expression()?;
-                        let body = Box::new(self.parse_statement()?);
+                        let body = Box::new(self.parse_statement(true)?);
                         let token = self.lexer.next_token();
                         if token == Token::Keyword(Keyword::Else) {
-                            let else_body = Box::new(self.parse_statement()?);
+                            let else_body = Box::new(self.parse_statement(true)?);
                             Ok(Statement::If(IfStatement {
                                 condition,
                                 body,
@@ -289,33 +294,42 @@ impl Parser {
                         }
                     }
                     Keyword::While => {
+                        if !semi {
+                            return Err("While cannot be used inside a for initialization or next component!".into());
+                        }
                         let condition = self.parse_expression()?;
-                        let body = Box::new(self.parse_statement()?);
+                        let body = Box::new(self.parse_statement(true)?);
                         Ok(Statement::While(WhileStatement {
                             condition,
                             body,
                         }))
                     }
                     Keyword::For => {
+                        if !semi {
+                            return Err("For cannot be used inside a for initialization or next component!".into());
+                        }
+                        let init = self.parse_statement(true)?;
                         let token = self.lexer.next_token();
-                        if let Token::Identifier(name) = token {
-                            let token = self.lexer.next_token();
-                            if !(token == Token::Colon || token == Token::Keyword(Keyword::In)) {
-                                return Err(format!("For: Unexpected token, expected ':' or 'in', found {}", token).into());
-                            }
-                            let iterable = self.parse_expression()?;
-                            let body = Box::new(self.parse_statement()?);
-                            Ok(Statement::For(ForStatement {
-                                variable: name,
-                                iterable,
-                                body,
-                            }))
+                        if token != Token::Semicolon {
+                            return Err(format!("For: Unexpected token, expected ';', found {}", token).into());
                         }
-                        else {
-                            return Err(format!("For: Unexpected token, expected Identifier, found {}", token).into());
+                        let condition = self.parse_expression()?;
+                        if token != Token::Semicolon {
+                            return Err(format!("For: Unexpected token, expected ';', found {}", token).into());
                         }
+                        let next = self.parse_statement(false)?;
+                        let mut body = self.parse_statement(true)?;
+                        Ok(Statement::For(ForStatement {
+                            init: Box::new(init),
+                            condition,
+                            next: Box::new(next),
+                            body: Box::new(body),
+                        }))
                     }
                     Keyword::Break => {
+                        if !semi {
+                            return Err("Break cannot be used inside a for initialization or next component!".into());
+                        }
                         let token = self.lexer.next_token();
                         if token != Token::Semicolon {
                             return Err(format!("Break: Unexpected token, expected ';', found {}", token).into());
@@ -323,6 +337,9 @@ impl Parser {
                         Ok(Statement::Break)
                     }
                     Keyword::Continue => {
+                        if !semi {
+                            return Err("Continue cannot be used inside a for initialization or next component!".into());
+                        }
                         let token = self.lexer.next_token();
                         if token != Token::Semicolon {
                             return Err(format!("Continue: Unexpected token, expected ';', found {}", token).into());
@@ -330,6 +347,9 @@ impl Parser {
                         Ok(Statement::Continue)
                     }
                     Keyword::Return => {
+                        if !semi {
+                            return Err("Return cannot be used inside a for initialization or next component!".into());
+                        }
                         let token = self.lexer.next_token();
                         if let Token::Semicolon = token {
                             Ok(Statement::Return(None))
@@ -354,7 +374,7 @@ impl Parser {
                 let mut token = self.lexer.next_token();
                 while token != Token::RCurly {
                     self.lexer.revert(token);
-                    body.push(self.parse_statement()?);
+                    body.push(self.parse_statement(true)?);
                     token = self.lexer.next_token();
                 }
                 Ok(Statement::Block(Block {
@@ -365,9 +385,11 @@ impl Parser {
                 let next = self.lexer.next_token();
                 if let Token::OperatorAssign(operator) = next {
                     let extra = self.parse_expression()?;
-                    let token = self.lexer.next_token();
-                    if token != Token::Semicolon {
-                        return Err(format!("Assignment: Unexpected token, expected ';', found {}", token).into());
+                    if semi {
+                        let token = self.lexer.next_token();
+                        if token != Token::Semicolon {
+                            return Err(format!("Assignment: Unexpected token, expected ';', found {}", token).into());
+                        }
                     }
                     let left = Box::new(Expression::Identifier(name.clone()));
                     Ok(Statement::Assignment(Assignment {
@@ -381,9 +403,11 @@ impl Parser {
                 }
                 else if let Token::Operator(Operator::Assign) = next {
                     let value = self.parse_expression()?;
-                    let token = self.lexer.next_token();
-                    if token != Token::Semicolon {
-                        return Err(format!("Assignment: Unexpected token, expected ';', found {}", token).into());
+                    if semi {
+                        let token = self.lexer.next_token();
+                        if token != Token::Semicolon {
+                            return Err(format!("Assignment: Unexpected token, expected ';', found {}", token).into());
+                        }
                     }
                     Ok(Statement::Assignment(Assignment {
                         name,
@@ -394,9 +418,11 @@ impl Parser {
                     self.lexer.revert(Token::Identifier(name));
                     self.lexer.revert(next);
                     let expr = self.parse_expression()?;
-                    let token = self.lexer.next_token();
-                    if token != Token::Semicolon {
-                        return Err(format!("Expression: Unexpected token, expected ';', found {}", token).into());
+                    if semi {
+                        let token = self.lexer.next_token();
+                        if token != Token::Semicolon {
+                            return Err(format!("Expression: Unexpected token, expected ';', found {}", token).into());
+                        }
                     }
                     Ok(Statement::Expression(expr))
                 }
@@ -405,9 +431,11 @@ impl Parser {
             _ => {
                 self.lexer.revert(token);
                 let expr = self.parse_expression()?;
-                let token = self.lexer.next_token();
-                if token != Token::Semicolon {
-                    return Err(format!("Expression: Unexpected token, expected ';', found {}", token).into());
+                if semi {
+                    let token = self.lexer.next_token();
+                    if token != Token::Semicolon {
+                        return Err(format!("Expression: Unexpected token, expected ';', found {}", token).into());
+                    }
                 }
                 Ok(Statement::Expression(expr))
             }
