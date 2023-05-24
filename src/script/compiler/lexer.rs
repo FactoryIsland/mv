@@ -322,6 +322,9 @@ impl Lexer {
                             break;
                         }
                     }
+                    if buffer == "static" {
+                        panic!("Static is a reserved name!");
+                    }
                     return if buffer == "true" {
                         Token::Literal(Literal::Bool(true))
                     }

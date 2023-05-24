@@ -49,9 +49,20 @@ pub fn link(files: Vec<AssemblyFile>) -> String {
         }
         let mut tokens = s.split_whitespace();
 
-        while let Some(token) = tokens.next() {
+        while let Some(mut token) = tokens.next() {
             if token == ".named" {
                 continue;
+            }
+            if token.starts_with('@') {
+                let mut ident = token.split_at(1).1;
+                if token.ends_with(':') {
+                    ident = ident.split_at(ident.len() - 1).0;
+                }
+                if ident == "static" {
+                    code.push_str(&format!("@{}_static:", name));
+                    code.push(' ');
+                    continue;
+                }
             }
             if token.starts_with('.') {
                 let mut ident = token.split_at(1).1;
@@ -67,6 +78,10 @@ pub fn link(files: Vec<AssemblyFile>) -> String {
                 code.push(' ');
                 continue;
             }
+            if token.starts_with('%') {
+                token = token.split_at(1).1;
+                code.push('%');
+            }
             if token.starts_with(['$', '&', '*']) {
                 let (c, ident) = token.split_at(1);
                 if globals.contains(&ident.to_string()) {
@@ -76,6 +91,11 @@ pub fn link(files: Vec<AssemblyFile>) -> String {
                 else {
                     code.push_str(token);
                 }
+                code.push(' ');
+                continue;
+            }
+            if token == "static" {
+                code.push_str(&format!("{}_static", name));
                 code.push(' ');
                 continue;
             }
@@ -99,7 +119,22 @@ pub fn link(files: Vec<AssemblyFile>) -> String {
                     code.push(' ');
                 }
                 "JZ" | "JNZ" | "JN" | "JNN" => {
-                    code.push_str(tokens.next().unwrap());
+                    let mut token = tokens.next().unwrap();
+                    if token.starts_with('%') {
+                        token = token.split_at(1).1;
+                        code.push('%');
+                    }
+                    if token.starts_with(['$', '&', '*']) {
+                        let (c, ident) = token.split_at(1);
+                        if globals.contains(&ident.to_string()) {
+                            code.push(c.chars().next().unwrap());
+                            code.push_str(&format!("{}_{}", name, ident));
+                        }
+                        else {
+                            code.push_str(token);
+                        }
+                        code.push(' ');
+                    }
                     code.push(' ');
                     let to = tokens.next().unwrap();
                     if labels.contains(&to.to_string()) {

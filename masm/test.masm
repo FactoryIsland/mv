@@ -1,3 +1,15 @@
 .named
-@main
+.global hi
+@get_message:
+    cpy _tmp #"If statements work!"
+    push_ret $_tmp
+    ret
+@main:
+    call static
+    cpy _tmp $hi
+    print $_tmp
+    ret
+@static:
+    cpy _tmp #"Hello"
+    cpy hi $_tmp
     ret

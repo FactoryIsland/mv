@@ -13,15 +13,17 @@ impl Generator {
     pub fn generate(self) -> String {
         let mut data = StaticData {
             preload_name: "static".to_string(),
+            preload_var: "static".to_string(),
             preload_code: String::new(),
+            lib: true,
             next_label: String::new(),
             label_stack: Vec::new()
         };
 
-        for e in &self.program.elements {
-            if let Element::Function(f) = e {
-                if f.name == data.preload_name {
-                    data.preload_name = data.preload_name + "0";
+        for f in &self.program.elements {
+            if let Element::Function(f) = f {
+                if f.name == "main" {
+                    data.lib = false;
                 }
             }
         }
@@ -31,15 +33,20 @@ impl Generator {
         if data.preload_code.is_empty() {
             format!(".named\n{}@{}:\nret", code, data.preload_name)
         }
+        else if data.lib {
+            format!(".named\n.global {}\n{}@{}:\njnn ${} end\nmov static true\n{}.end:\nret", data.preload_var, code, data.preload_name, data.preload_var, data.preload_code)
+        }
         else {
-            format!(".named\n{}@{}:\n{}\nret", code, data.preload_name, data.preload_code)
+            format!(".named\n{}@{}:\n{}ret", code, data.preload_name, data.preload_code)
         }
     }
 }
 
 pub struct StaticData {
     pub preload_name: String,
+    pub preload_var: String,
     pub preload_code: String,
+    pub lib: bool,
     pub next_label: String,
     pub label_stack: Vec<String>,
 }
@@ -113,7 +120,7 @@ impl Codegen for Function {
     fn codegen(self, data: &mut StaticData) -> String {
         let mut code = String::new();
         code.push_str(&format!("@{}:\n", self.name));
-        if self.name == "main" {
+        if self.name == "main" || data.lib {
             code.push_str(&format!("call {}\n", data.preload_name));
         }
         for (param, _) in self.parameters {

@@ -269,6 +269,11 @@ pub fn run(code: &[u8], args: Vec<String>) {
         }
     }
 
+    let amount = buffer.pop_u32().unwrap();
+    for _ in 0..amount {
+        variables.push(Variable::Null);
+    }
+
     buffer.set_rpos(main as usize);
 
     loop {

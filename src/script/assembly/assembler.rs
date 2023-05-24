@@ -343,7 +343,7 @@ pub fn assemble(input: String) -> Vec<u8> {
     let (globals, usages, _, _) = extract(&input);
     let mut buffer = ByteBuffer::new();
     let mut tokens = input.split_whitespace();
-    let mut index = 8;
+    let mut index = 12;
     let mut labels = HashMap::new();
     let mut jump_calls = Vec::new();
     let mut addresses = Vec::new();
@@ -365,6 +365,7 @@ pub fn assemble(input: String) -> Vec<u8> {
 
     buffer.push_u32(0);
     buffer.push_u32(0);
+    buffer.push_u32(globals.len() as u32);
 
     macro_rules! push_val {
         () => {

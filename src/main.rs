@@ -37,7 +37,7 @@ fn test_compiler() {
 
     let script = generator.generate();
 
-    println!("{}", script);
+    //println!("{}", script);
 
     let script = AssemblyFile {
         name: "script".to_string(),
@@ -71,15 +71,6 @@ fn test_compiler() {
         code: git
     };
 
-    //let mut file = OpenOptions::new().read(true).open("masm/git.masm").unwrap();
-    //let mut git = String::new();
-    //file.read_to_string(&mut git).unwrap();
-
-    //let lib = AssemblyFile {
-    //    name: "git".to_string(),
-    //    code: git
-    //};
-
     let linked = link(vec![script, git]);
 
     let bytecode = assemble(linked);
@@ -107,6 +98,8 @@ fn test_assembler() {
     };
 
     let assembly = link(vec![test]);
+
+    println!("{}", assembly);
 
     let bytecode = assemble(assembly);
     let mut file = OpenOptions::new().create(true).write(true).truncate(true).open("masm/script.mv").unwrap();
