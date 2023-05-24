@@ -64,8 +64,6 @@ fn test_compiler() {
 
     let git = generator.generate();
 
-    println!("{}", git);
-
     let git = AssemblyFile {
         name: "git".to_string(),
         code: git

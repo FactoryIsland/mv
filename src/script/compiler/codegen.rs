@@ -151,10 +151,10 @@ impl Codegen for Statement {
                 let mut code = String::new();
                 if let Some(v) = d.value {
                     code.push_str(&v.codegen(data));
-                    code.push_str(&format!("cpy {} $_tmp", d.name));
+                    code.push_str(&format!("cpy {} $_tmp\n", d.name));
                 }
                 else {
-                    code.push_str(&format!("cpy {} null", d.name));
+                    code.push_str(&format!("cpy {} null\n", d.name));
                 }
                 code
             },
@@ -204,7 +204,14 @@ impl Codegen for IfStatement {
 
 impl Codegen for WhileStatement {
     fn codegen(self, data: &mut StaticData) -> String {
-        String::new()
+        let continue_label = data.next_label();
+        let break_label = data.next_label();
+        let true_label = data.next_label();
+        let cond = self.condition.codegen_conditional(data, &true_label, &break_label);
+        let block = self.body.codegen(data);
+        data.label_stack.push(break_label.clone());
+        data.label_stack.push(continue_label.clone());
+        format!(".{}:\n{}.{}:\n{}jmp {}\n.{}:\n", continue_label, cond, true_label, block, continue_label, break_label)
     }
 }
 
@@ -330,7 +337,7 @@ impl Codegen for Expression {
                     code.push_str(&b.right.codegen(data));
                     code.push_str("cpy _tmp2 $_tmp\n");
                     code.push_str(&b.left.codegen(data));
-                    code.push_str("cmp $_tmp2 $_tmp\n");
+                    code.push_str("cmp $_tmp $_tmp2\n");
                     code.push_str(&format!("{} {}\n", match b.operator {
                         Operator::Equal => "je",
                         Operator::NotEqual => "jne",

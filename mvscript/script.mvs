@@ -1,7 +1,7 @@
-//include git;
+include git;
 
 fn get_message() -> String {
-    return "Global variables in libraries!";
+    return "While loops";
 }
 
 fn main() {
