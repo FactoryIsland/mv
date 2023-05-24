@@ -309,11 +309,8 @@ impl Parser {
                             return Err("For cannot be used inside a for initialization or next component!".into());
                         }
                         let init = self.parse_statement(true)?;
-                        let token = self.lexer.next_token();
-                        if token != Token::Semicolon {
-                            return Err(format!("For: Unexpected token, expected ';', found {}", token).into());
-                        }
                         let condition = self.parse_expression()?;
+                        let token = self.lexer.next_token();
                         if token != Token::Semicolon {
                             return Err(format!("For: Unexpected token, expected ';', found {}", token).into());
                         }

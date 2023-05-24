@@ -217,7 +217,16 @@ impl Codegen for WhileStatement {
 
 impl Codegen for ForStatement {
     fn codegen(self, data: &mut StaticData) -> String {
-        String::new()
+        let continue_label = data.next_label();
+        let break_label = data.next_label();
+        let true_label = data.next_label();
+        let init = self.init.codegen(data);
+        let cond = self.condition.codegen_conditional(data, &true_label, &break_label);
+        let next = self.next.codegen(data);
+        let block = self.body.codegen(data);
+        data.label_stack.push(break_label.clone());
+        data.label_stack.push(continue_label.clone());
+        format!("{}.{}:\n{}.{}:\n{}{}jmp {}\n.{}:\n", init, continue_label, cond, true_label, block, next, continue_label, break_label)
     }
 }
 

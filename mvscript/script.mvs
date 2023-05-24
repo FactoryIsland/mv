@@ -1,7 +1,7 @@
 include git;
 
 fn get_message() -> String {
-    return "While loops";
+    return "For loops";
 }
 
 fn main() {
