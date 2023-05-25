@@ -1,0 +1,7 @@
+1) script.mvs + git.mvs
+2) script.ltokens + git.ltokens
+2.5) script.tokens + git.tokens
+3) script.ast + git.ast
+4) script.masm + git.masm
+5) linked.masm
+6) out.mv

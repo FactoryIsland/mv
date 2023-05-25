@@ -1,0 +1,35 @@
+Program {
+    elements: [
+        Statement(Include("git")),
+        Function(Function {
+            name: "get_message",
+            parameters: [],
+            return_type: String,
+            body: Block {
+                statements: [
+                    Return(Some(Literal(String("Pipeline example"))))
+                ]
+            }
+        }),
+        Function(Function {
+            name: "main",
+            parameters: [],
+            return_type: Void,
+            body: Block {
+                statements: [
+                    Expression(Call(CallExpression {
+                        function: "git",
+                        arguments: [
+                            Literal(Null),
+                            Call(CallExpression {
+                                function: "get_message",
+                                arguments: []
+                            }),
+                            Literal(Null)
+                        ]
+                    }))
+                ]
+            }
+        })
+    ]
+}

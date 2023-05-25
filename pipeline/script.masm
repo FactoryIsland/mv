@@ -1,0 +1,20 @@
+.named
+.extern git
+@get_message:
+    cpy _tmp #"Pipeline example"
+    push_ret $_tmp
+    ret
+@main:
+    call static
+    cpy _tmp null
+    push $_tmp
+    call get_message
+    pop_ret _tmp
+    push $_tmp
+    cpy _tmp null
+    push $_tmp
+    call git
+    pop_ret _tmp
+    ret
+@static:
+    ret

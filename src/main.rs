@@ -10,6 +10,8 @@ use crate::script::compiler::lexer::Lexer;
 use crate::script::compiler::parser::Parser;
 use crate::script::run::run;
 
+use std::process::exit;
+
 fn main() {
     test_compiler();
 
@@ -36,8 +38,6 @@ fn test_compiler() {
     let generator = Generator::new(result);
 
     let script = generator.generate();
-
-    //println!("{}", script);
 
     let script = AssemblyFile {
         name: "script".to_string(),
