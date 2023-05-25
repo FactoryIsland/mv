@@ -1,7 +1,7 @@
 include git;
 
 fn get_message() -> String {
-    return "For loops";
+    return "Fixed parser associativity bug";
 }
 
 fn main() {

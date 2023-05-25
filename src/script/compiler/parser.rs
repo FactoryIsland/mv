@@ -460,7 +460,7 @@ impl Parser {
             while let Token::Operator(inner_op) = inner_token {
                 let inner_precedence = inner_op.precedence()?;
 
-                if inner_precedence < precedence {
+                if inner_precedence <= precedence {
                     self.lexer.revert(Token::Operator(inner_op));
                     inner_token = self.lexer.next_token();
                     break;
