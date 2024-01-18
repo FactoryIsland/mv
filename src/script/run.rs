@@ -497,7 +497,7 @@ pub fn run(code: &[u8], args: Vec<String>) {
             }
             SH => {
                 let str = get_str(&mut buffer, &args, &variables);
-                Command::new("sh").arg("-c").arg(format!("\"{}\"", str)).spawn().unwrap().wait().unwrap();
+                Command::new("sh").arg("-c").arg(format!("{}", str)).spawn().unwrap().wait().unwrap();
             }
             PUSH_RET => {
                 ret = parse_variable(&mut buffer, &mut variables, &args, false);

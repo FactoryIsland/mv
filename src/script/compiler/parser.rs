@@ -48,9 +48,6 @@ impl Parser {
     pub fn parse(mut self) -> Result<Program, ParseError> {
         while let Some(token) = self.lexer.next() {
             let element = self.parse_element(token)?;
-            //if element.is_err() {
-            //    return Ok(self.program);
-            //}
             self.program.push(element);
         }
         Ok(self.program)

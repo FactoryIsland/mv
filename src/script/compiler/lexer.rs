@@ -325,6 +325,9 @@ impl Lexer {
                     if buffer == "static" {
                         panic!("Static is a reserved name!");
                     }
+                    else if buffer == "_tmp" || buffer == "_tmp2" {
+                        panic!("_tmp and _tmp2 are reserved names!");
+                    }
                     return if buffer == "true" {
                         Token::Literal(Literal::Bool(true))
                     }

@@ -1,9 +1,5 @@
 include git;
 
-fn get_message() -> String {
-    return "For loops";
-}
-
 fn main() {
-    git(null, get_message(), null);
+    git(null, "Made the program something you can run", null);
 }

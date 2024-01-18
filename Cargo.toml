@@ -3,6 +3,12 @@ name = "mvc"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+panic = "abort"
+opt-level = 3
+strip = true
+lto = true
+
 [dependencies]
 bytebuffer = "2.1.1"
 hashbrown = "0.13.2"

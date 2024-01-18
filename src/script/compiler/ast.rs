@@ -22,7 +22,7 @@ impl Program {
 pub enum Element {
     Statement(TopLevelStatement),
     Function(Function),
-    Empty,
+    Empty
 }
 
 #[derive(Debug, Clone)]
