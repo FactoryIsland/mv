@@ -1,19 +1,25 @@
+use std::fs::OpenOptions;
+use std::io::Read;
+use std::process::exit;
 use hashbrown::HashSet;
 use mvutils::utils::remove_quotes;
 use crate::script::assembly::assembler::{extract};
+use crate::script::compiler::codegen::Generator;
+use crate::script::compiler::lexer::Lexer;
+use crate::script::compiler::parser::Parser;
 
 pub struct AssemblyFile {
     pub name: String,
     pub code: String
 }
 
-fn err(str: String) {
+fn err(str: String) -> ! {
     eprintln!("{}", str);
-    std::process::exit(1);
+    exit(1);
 }
 
 
-pub fn link(files: Vec<AssemblyFile>) -> String {
+pub fn link(mut files: Vec<AssemblyFile>) -> String {
     let mut names = files.iter().map(|f| f.name.clone()).collect::<Vec<_>>();
     names.sort_unstable();
     let mut adapted = HashSet::new();
@@ -26,6 +32,63 @@ pub fn link(files: Vec<AssemblyFile>) -> String {
     }
     drop(adapted);
 
+    let externals_needed = files.iter().map(|f| {
+        let (_, _, externs, _) = extract(&f.code);
+        let mut needed = Vec::new();
+        for e in externs {
+            if names.binary_search(&e).is_err() {
+                needed.push(e);
+            }
+        }
+        needed
+    }).flatten().collect::<HashSet<_>>();
+
+    for external in externals_needed {
+        const PATHS: [&str; 4] = ["/usr/bin/", "/usr/lib/", "/usr/local/bin/", "/usr/local/lib/"];
+        let asm = external.clone() + ".masm";
+        let mvs = external.clone() + ".mvs";
+        if let Some(mut file) = PATHS.iter().flat_map(|s| {
+            let path = s.to_string() + &asm;
+            OpenOptions::new().read(true).open(path).ok()
+        }).next() {
+            let mut code = String::new();
+            file.read_to_string(&mut code).expect("Failed to read dependency");
+
+            files.push(AssemblyFile {
+                name: external,
+                code,
+            })
+        } else if let Some(mut file) = PATHS.iter().flat_map(|s| {
+            let path = s.to_string() + &mvs;
+            OpenOptions::new().read(true).open(path).ok()
+        }).next() {
+            let mut code = String::new();
+            file.read_to_string(&mut code).expect("Failed to read dependency");
+            let lexer = Lexer::new(code);
+
+            let parser = Parser::new(lexer);
+
+            let result = parser.parse();
+
+            if let Err(e) = result {
+                println!("{:?}", e);
+                exit(1);
+            }
+            let result = result.unwrap();
+
+            let generator = Generator::new(result);
+
+            let script = generator.generate();
+
+            files.push(AssemblyFile {
+                name: external,
+                code: script,
+            })
+        } else {
+            err(format!("External dependency '{}' not present!", external));
+        }
+    }
+
     files.into_iter().map(|f| {
         let input = remove_quotes(&clean(f.code.trim()));
         (f.name, input.split_whitespace().collect::<Vec<_>>().join(" "))
@@ -34,13 +97,7 @@ pub fn link(files: Vec<AssemblyFile>) -> String {
             err("Files that are linked are not allowed to be index-accessed. Use '.named' instead.".to_string());
         }
 
-        let (globals, _, externs, labels) = extract(&s);
-
-        for e in externs {
-            if names.binary_search(&e).is_err() {
-                err(format!("External dependency '{}' not present!", e));
-            }
-        }
+        let (globals, _, _, labels) = extract(&s);
 
         let name = adapt(name);
         let mut code = String::new();

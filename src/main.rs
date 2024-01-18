@@ -92,7 +92,16 @@ fn compile(paths: Vec<String>, output: String) {
 }
 
 fn execute(path: String, args: Vec<String>) {
-    let mut file = OpenOptions::new().read(true).open(path).unwrap();
+    const PATHS: [&str; 3] = ["", "/usr/bin/", "/usr/local/bin/"];
+    let mut file = PATHS.iter().flat_map(|s| {
+        let path = s.to_string() + &path;
+        if let Some(f) = OpenOptions::new().read(true).open(path.clone()).ok() {
+            Some(f)
+        }
+        else {
+            OpenOptions::new().read(true).open(path + ".mv").ok()
+        }
+    }).next().unwrap();
     let mut bytecode = Vec::new();
     file.read_to_end(&mut bytecode).expect("Failed to read file");
     run(&bytecode, args);

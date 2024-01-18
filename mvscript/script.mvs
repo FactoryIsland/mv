@@ -1,5 +1,5 @@
 include git;
 
 fn main() {
-    git(null, "Allowing to add numbers " + 0 + " to strings!", null);
+    git(null, "Fancier system", null);
 }
