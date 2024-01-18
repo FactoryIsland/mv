@@ -44,7 +44,7 @@ fn get_str_any(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable])
                 buffer.pop_u16().unwrap() as usize
             };
             if id as usize >= args.len() {
-                err(format!("Argument id {} out of range!", id));
+                return "null".to_string();
             }
             args[id as usize].clone()
         }
@@ -103,7 +103,7 @@ fn get_str(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> 
             let id = if ident == VARIABLE {
                 let index = buffer.pop_u32().unwrap();
                 if index >= variables.len() as u32 {
-                    err(format!("Argument id {} out of range!", index));
+                    err(format!("Variable id {} out of range!", index));
                 }
                 variables[index as usize].int() as usize
             }
@@ -111,7 +111,7 @@ fn get_str(buffer: &mut ByteBuffer, args: &[String], variables: &[Variable]) -> 
                 buffer.pop_u16().unwrap() as usize
             };
             if id as usize >= args.len() {
-                err(format!("Argument id {} out of range!", id));
+                return "null".to_string();
             }
             args[id as usize].clone()
         }
@@ -170,7 +170,7 @@ fn parse_variable(buffer: &mut ByteBuffer, variables: &mut [Variable], args: &[S
             let id = if ident == VARIABLE {
                 let index = buffer.pop_u32().unwrap();
                 if index >= variables.len() as u32 {
-                    err(format!("Argument id {} out of range!", index));
+                    err(format!("Variable id {} out of range!", index));
                 }
                 variables[index as usize].int() as usize
             }
@@ -178,7 +178,7 @@ fn parse_variable(buffer: &mut ByteBuffer, variables: &mut [Variable], args: &[S
                 buffer.pop_u16().unwrap() as usize
             };
             if id as usize >= args.len() {
-                err(format!("Argument id {} out of range!", id));
+                return Variable::Null;
             }
             Variable::String(args[id as usize].clone())
         }

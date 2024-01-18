@@ -1,0 +1,100 @@
+Program {
+    elements: [
+        Statement(Use([
+            "git_add",
+            "git_add_all",
+            "git_commit",
+            "git_commit_default",
+            "git_push",
+            "git_push_upstream"
+        ])),
+        Function(Function {
+            name: "git",
+            parameters: [
+                ("files", String),
+                ("message", String),
+                ("upstream", String)
+            ],
+            return_type: Void,
+            body: Block {
+                statements: [
+                    If(IfStatement {
+                        condition: Binary(BinaryExpression {
+                            left: Identifier("files"),
+                            operator: Equal,
+                            right: Literal(Null)
+                        }),
+                        body: Block(Block {
+                            statements: [
+                                Expression(Call(CallExpression {
+                                    function: "git_add_all",
+                                    arguments: []
+                                }))
+                            ]
+                        }),
+                        else_body: Some(Block(Block {
+                            statements: [
+                                Expression(Call(CallExpression {
+                                    function: "git_add",
+                                    arguments: [
+                                        Identifier("files")
+                                    ]
+                                }))
+                            ]
+                        }))
+                    }),
+                    If(IfStatement {
+                        condition: Binary(BinaryExpression {
+                            left: Identifier("message"),
+                            operator: Equal,
+                            right: Literal(Null)
+                        }),
+                        body: Block(Block {
+                            statements: [
+                                Expression(Call(CallExpression {
+                                    function: "git_commit_default",
+                                    arguments: []
+                                }))
+                            ]
+                        }),
+                        else_body: Some(Block(Block {
+                            statements: [
+                                Expression(Call(CallExpression {
+                                    function: "git_commit",
+                                    arguments: [
+                                        Identifier("message")
+                                    ]
+                                }))
+                            ]
+                        }))
+                    }),
+                    If(IfStatement {
+                        condition: Binary(BinaryExpression {
+                            left: Identifier("upstream"),
+                            operator: Equal,
+                            right: Literal(Null)
+                        }),
+                        body: Block(Block {
+                            statements: [
+                                Expression(Call(CallExpression {
+                                    function: "git_push_upstream",
+                                    arguments: []
+                                }))
+                            ]
+                        }),
+                        else_body: Some(Block(Block {
+                            statements: [
+                                Expression(Call(CallExpression {
+                                    function: "git_push",
+                                    arguments: [
+                                        Identifier("upstream")
+                                    ]
+                                }))
+                            ]
+                        }))
+                    })
+                ]
+            }
+        })
+    ]
+}

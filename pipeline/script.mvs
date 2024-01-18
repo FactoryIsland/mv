@@ -1,0 +1,9 @@
+include git;
+
+fn get_message() -> String {
+    return "Pipeline example";
+}
+
+fn main() {
+    git(null, get_message(), null);
+}

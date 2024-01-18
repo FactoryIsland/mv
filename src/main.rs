@@ -13,6 +13,8 @@ use crate::script::compiler::lexer::Lexer;
 use crate::script::compiler::parser::Parser;
 use crate::script::run::run;
 
+use std::process::exit;
+
 fn main() {
     let args = env::args().collect::<Vec<_>>();
     if args.len() < 2 {

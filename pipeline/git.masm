@@ -1,0 +1,54 @@
+.named
+.use git_add
+.use git_add_all
+.use git_commit
+.use git_commit_default
+.use git_push
+.use git_push_upstream
+@git:
+    call static
+    pop files
+    pop message
+    pop upstream
+    cpy _tmp $files
+    jn $_tmp L0
+    jmp L1
+  .L0:
+    call git_add_all
+    pop_ret _tmp
+    jmp L2
+  .L1:
+    cpy _tmp $files
+    push $_tmp
+    call git_add
+    pop_ret _tmp
+  .L2:
+    cpy _tmp $message
+    jn $_tmp L3
+    jmp L4
+  .L3:
+    call git_commit_default
+    pop_ret _tmp
+    jmp L5
+  .L4:
+    cpy _tmp $message
+    push $_tmp
+    call git_commit
+    pop_ret _tmp
+  .L5:
+    cpy _tmp $upstream
+    jn $_tmp L6
+    jmp L7
+  .L6:
+    call git_push_upstream
+    pop_ret _tmp
+    jmp L8
+  .L7:
+    cpy _tmp $upstream
+    push $_tmp
+    call git_push
+    pop_ret _tmp
+  .L8:
+    ret
+@static:
+    ret
