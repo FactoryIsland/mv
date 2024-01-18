@@ -44,7 +44,7 @@ pub fn link(mut files: Vec<AssemblyFile>) -> String {
     }).flatten().collect::<HashSet<_>>();
 
     for external in externals_needed {
-        const PATHS: [&str; 4] = ["/usr/bin/", "/usr/lib/", "/usr/local/bin/", "/usr/local/lib/"];
+        const PATHS: [&str; 6] = ["/usr/bin/", "/usr/lib/", "/usr/include/", "/usr/local/bin/", "/usr/local/lib/", "/usr/local/include/"];
         let asm = external.clone() + ".masm";
         let mvs = external.clone() + ".mvs";
         if let Some(mut file) = PATHS.iter().flat_map(|s| {
