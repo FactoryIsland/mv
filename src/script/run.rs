@@ -881,6 +881,25 @@ impl Variable {
     }
 
     fn add(&mut self, other: &Variable) {
+        if let Variable::Reference(ptr) = self {
+            unsafe {
+                (*ptr).as_mut().unwrap().add(other)
+            }
+            return;
+        }
+        if let Variable::String(s) = other && !matches!(self, Variable::String(_)) {
+            let mut str = match self {
+                Variable::Char(c) => unsafe { char::from_u32_unchecked(*c) }.to_string(),
+                Variable::Int(i) => i.to_string(),
+                Variable::Float(f) => f.to_string(),
+                Variable::Bool(b) => b.to_string(),
+                Variable::Null => "null".to_string(),
+                _ => unreachable!()
+            };
+            str.push_str(s.as_str());
+            let _ = mem::replace(self, Variable::String(str));
+            return;
+        }
         match self {
             Variable::Int(a) => match other {
                 Variable::Int(b) => {
@@ -927,8 +946,17 @@ impl Variable {
                 }
                 _ => err("Cannot add non number types!".to_string())
             }
-            Variable::Reference(ptr) => unsafe { (*ptr).as_mut().unwrap().add(other) }
-            _ => err("Cannot add non number types!".to_string())
+            Variable::Reference(ptr) => unreachable!(),
+            Variable::String(s) => match other {
+                Variable::String(str) => s.push_str(str.as_str()),
+                Variable::Char(c) => s.push(unsafe { char::from_u32_unchecked(*c) }),
+                Variable::Int(i) => s.push_str(&i.to_string()),
+                Variable::Float(f) => s.push_str(&f.to_string()),
+                Variable::Bool(b) => s.push_str(&b.to_string()),
+                Variable::Reference(ptr) => self.add(unsafe { (*ptr).as_ref().unwrap() }),
+                Variable::Null => s.push_str("null")
+            }
+            _ => err("Cannot add non number or non string types!".to_string())
         }
     }
 

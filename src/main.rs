@@ -1,10 +1,11 @@
+#![feature(let_chains)]
+
 pub mod msg;
 pub mod script;
 
 use std::env;
 use std::fs::OpenOptions;
 use std::io::{Read, Write};
-use std::os::unix::fs::MetadataExt;
 use std::process::exit;
 use crate::script::assembly::assembler::assemble;
 use crate::script::assembly::linker::{AssemblyFile, link};
@@ -12,8 +13,6 @@ use crate::script::compiler::codegen::Generator;
 use crate::script::compiler::lexer::Lexer;
 use crate::script::compiler::parser::Parser;
 use crate::script::run::run;
-
-use std::process::exit;
 
 fn main() {
     let args = env::args().collect::<Vec<_>>();
@@ -67,7 +66,7 @@ fn compile(paths: Vec<String>, output: String) {
 
         if let Err(e) = result {
             println!("{:?}", e);
-            exit(1);;
+            exit(1);
         }
         let result = result.unwrap();
 
